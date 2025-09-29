@@ -60,4 +60,11 @@ explore: optimizer_candidates {
     relationship: many_to_one
     sql_on: ${optimizer_candidates.id} = ${optimizer_attempt_bookings.candidate_id} ;;
   }
+
+  join: optimizer_candidate_tags_flat {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_candidates.id} = ${optimizer_candidate_tags_flat.candidate_id} ;;
+  }
+
 }
