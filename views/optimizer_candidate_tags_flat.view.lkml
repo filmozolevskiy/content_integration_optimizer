@@ -21,6 +21,7 @@ view: optimizer_candidate_tags_flat {
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'MultiTicketPart'                  THEN p.tag_value END) AS multiticketpart_values,
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'Original'                         THEN p.tag_value END) AS original_values,
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'RepriceIndex'                     THEN p.tag_value END) AS repriceindex_values
+        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'Exception'                        THEN p.tag_value END) AS exception_values
       FROM pairs p
       GROUP BY p.candidate_id
       ;;
@@ -36,6 +37,8 @@ view: optimizer_candidate_tags_flat {
   dimension: multiticketpart { type: string sql: ${TABLE}.multiticketpart_values ;; }
   dimension: original        { type: string sql: ${TABLE}.original_values ;;  hidden: yes}
   dimension: repriceindex    { type: string sql: ${TABLE}.repriceindex_values ;; }
+  dimension: exception    { type: string sql: ${TABLE}.exception_values ;; }
+
 
   # Convenience yes/no flags
   dimension: has_multicurrency   { type: yesno sql: ${multicurrency}   IS NOT NULL AND ${multicurrency}   != '' ;; }
