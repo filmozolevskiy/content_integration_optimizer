@@ -20,7 +20,7 @@ view: optimizer_candidate_tags_flat {
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'MultiCurrency'                    THEN p.tag_value END) AS multicurrency_values,
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'MultiTicketPart'                  THEN p.tag_value END) AS multiticketpart_values,
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'Original'                         THEN p.tag_value END) AS original_values,
-        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'RepriceIndex'                     THEN p.tag_value END) AS repriceindex_values
+        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'RepriceIndex'                     THEN p.tag_value END) AS repriceindex_values,
         GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'Exception'                        THEN p.tag_value END) AS exception_values
       FROM pairs p
       GROUP BY p.candidate_id
