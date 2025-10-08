@@ -2,14 +2,32 @@ view: content_integration_optimizer {
 
   derived_table: {
     sql:
-      WITH pairs AS (
+      WITH tags_agg AS (
         SELECT
           oct.candidate_id,
-          ot.name  AS tag_name,
-          CASE WHEN ot.name = 'Original' THEN 'Yes' ELSE oct.value END  AS tag_value
+
+          GROUP_CONCAT(
+            DISTINCT CONCAT(
+              ot.name, ':', COALESCE(CASE WHEN ot.name = 'Original' THEN 'Yes' ELSE oct.value END, '')
+            )
+            ORDER BY ot.name, oct.value
+            SEPARATOR ', '
+          ) AS tag_pairs,
+
+          /* Keep this mapping updated!!! */
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart' THEN oct.value END) AS multiticketpart_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Original'        THEN 'Yes'       END) AS original_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'AlternativeMarketingCarrier'       THEN oct.value END) AS alternative_marketing_carrier,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Downgrade'       THEN oct.value END) AS downgrade,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'KiwiVirtualInterlining'       THEN oct.value END) AS kiwi_virtual_interlining,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MixedFareType'       THEN oct.value END) AS mixed_fare_type,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'NetUnderPub'       THEN oct.value END) AS net_under_pub,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'SearchBoosterDiscount'       THEN oct.value END) AS search_booster_discount,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Exception'       THEN oct.value END) AS exception_values
+
         FROM ota.optimizer_candidate_tags oct
         JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-        GROUP BY oct.candidate_id, ot.name, oct.value
+        GROUP BY oct.candidate_id
       )
 
       SELECT
@@ -52,19 +70,22 @@ view: content_integration_optimizer {
 
         oab.booking_id,
 
-        -- need to keep this updated
-        GROUP_CONCAT(DISTINCT CONCAT(p.tag_name, ':', COALESCE(p.tag_value, '')) ORDER BY p.tag_name, p.tag_value SEPARATOR ', ') AS tag_pairs,
-        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'MultiCurrency'                    THEN p.tag_value END) AS multicurrency_values,
-        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'MultiTicketPart'                  THEN p.tag_value END) AS multiticketpart_values,
-        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'Original'                         THEN p.tag_value END) AS original_values,
-        GROUP_CONCAT(DISTINCT CASE WHEN p.tag_name = 'Exception'                        THEN p.tag_value END) AS exception_values
+        ta.tag_pairs,
+        ta.multiticketpart_values,
+        ta.original_values,
+        ta.alternative_marketing_carrier_values,
+        ta.downgrade_values,
+        ta.kiwi_virtual_interlining_values,
+        ta.mixed_fare_type_values,
+        ta.net_under_pub_values,
+        ta.search_booster_discount_values,
+        ta.exception_values
 
       FROM optimizer_candidates oc
       LEFT JOIN optimizer_attempts oa ON oc.attempt_id = oa.id
       LEFT JOIN optimizer_attempt_bookings oab ON oab.attempt_id = oa.id
       LEFT JOIN pairs p ON oc.id = p.candidate_id
-
-      GROUP BY p.candidate_id
+      GROUP BY oc.id
       ;;
   }
 
@@ -106,18 +127,26 @@ view: content_integration_optimizer {
   dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; }
 
   # ----- Categorical -----
-  dimension: candidacy            { type: string sql: ${TABLE}.candidacy ;; }
-  dimension: gds                  { type: string sql: ${TABLE}.gds ;; }
-  dimension: currency             { type: string sql: ${TABLE}.currency ;; }
-  dimension: fare_type            { type: string sql: ${TABLE}.fare_type ;; }
-  dimension: validating_carrier   { type: string sql: ${TABLE}.validating_carrier ;; }
-  dimension: pricing_options      { type: string sql: ${TABLE}.pricing_options ;; }
-  dimension: flight_numbers       { type: string sql: ${TABLE}.flight_numbers ;; }
-  dimension: booking_classes      { type: string sql: ${TABLE}.booking_classes ;; }
-  dimension: cabin_codes          { type: string sql: ${TABLE}.cabin_codes ;; }
-  dimension: fare_bases           { type: string sql: ${TABLE}.fare_bases ;; }
-  dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; }
-  dimension: trip_type            { type: string sql: ${TABLE}.trip_type ;; }
+  dimension: candidacy {
+    type: string
+    sql: ${TABLE}.candidacy ;;
+    description: "Candidate eligibility status"
+    group_label: "General"
+    suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
+
+  }
+
+  dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "General"}
+  dimension: currency             { type: string sql: ${TABLE}.currency ;; group_label: "General"}
+  dimension: fare_type            { type: string sql: ${TABLE}.fare_type ;; group_label: "General"}
+  dimension: validating_carrier   { type: string sql: ${TABLE}.validating_carrier ;; group_label: "General"}
+  dimension: pricing_options      { type: string sql: ${TABLE}.pricing_options ;; group_label: "General"}
+  dimension: flight_numbers       { type: string sql: ${TABLE}.flight_numbers ;; group_label: "General"}
+  dimension: booking_classes      { type: string sql: ${TABLE}.booking_classes ;; group_label: "General"}
+  dimension: cabin_codes          { type: string sql: ${TABLE}.cabin_codes ;; group_label: "General"}
+  dimension: fare_bases           { type: string sql: ${TABLE}.fare_bases ;; group_label: "General"}
+  dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "General"}
+  dimension: trip_type            { type: string sql: ${TABLE}.trip_type ;; group_label: "General"}
 
   # ----- Monetary -----
   dimension: base                 { type: number value_format: "#,##0.00" sql: ${TABLE}.base ;; }
@@ -144,11 +173,13 @@ view: content_integration_optimizer {
     group_label: "Tags"
   }
 
-  dimension: multicurrency {
-    type: string
-    sql: ${TABLE}.multicurrency_values ;;
-    group_label: "Tags"
-  }
+  # dimension: multicurrency {
+  #   type: string
+  #   sql: ${TABLE}.multicurrency_values ;;
+  #   group_label: "Tags"
+  # }
+  # need to rewrite it rely on the currency from original/attempt to the candidate
+
 
   dimension: multiticket_part {
     type: string
@@ -158,7 +189,7 @@ view: content_integration_optimizer {
 
   dimension: is_original {
     type: yesno
-    sql: CASE WHEN ${TABLE}.original_value LIKE '%Yes%' THEN TRUE ELSE FALSE END ;;
+    sql: CASE WHEN ${TABLE}.original_value LIKE 'Yes' THEN TRUE ELSE FALSE END ;;
     group_label: "Tags"
   }
 
@@ -180,81 +211,52 @@ view: content_integration_optimizer {
     group_label: "Tags"
   }
 
+  dimension: alternative_marketing_carrier_values {
+    type: string
+    sql: ${TABLE}.alternative_marketing_carrier_values ;;
+    group_label: "Tags"
+  }
+
+  dimension: downgrade_values {
+    type: string
+    sql: ${TABLE}.downgrade_values ;;
+    group_label: "Tags"
+  }
+
+  dimension: kiwi_virtual_interlining_values {
+    type: string
+    sql: ${TABLE}.kiwi_virtual_interlining_values ;;
+    group_label: "Tags"
+  }
+
+  dimension: mixed_fare_type_values {
+    type: string
+    sql: ${TABLE}.mixed_fare_type_values ;;
+    group_label: "Tags"
+  }
+
+  dimension: net_under_pub_values {
+    type: string
+    sql: ${TABLE}.net_under_pub_values ;;
+    group_label: "Tags"
+  }
+
+  dimension: search_booster_discount_values {
+    type: string
+    sql: ${TABLE}.search_booster_discount_values ;;
+    group_label: "Tags"
+  }
+
 
   # -------------------------
   # Measures
   # -------------------------
 
   measure: all_contestants_count {
-    type: count
-  }
-
-  measure: contestants {
     type: count_distinct
     sql: ${contestant_id} ;;
   }
 
-  measure: attempts {
-    type: count_distinct
-    sql: ${attempt_id} ;;
-  }
 
-  measure: bookings {
-    type: count_distinct
-    sql: ${booking_id} ;;
-  }
-
-  measure: searches {
-    type: count_distinct
-    sql: ${search_id} ;;
-  }
-
-  # Money rollups
-  measure: sum_base            { type: sum sql: ${base} ;; }
-  measure: sum_tax             { type: sum sql: ${tax} ;; }
-  measure: sum_markup          { type: sum sql: ${markup} ;; }
-  measure: sum_total           { type: sum sql: ${total} ;; }
-  measure: sum_commission      { type: sum sql: ${commission} ;; }
-  measure: sum_merchant_fee    { type: sum sql: ${merchant_fee} ;; }
-  measure: sum_supplier_fee    { type: sum sql: ${supplier_fee} ;; }
-  measure: sum_revenue         { type: sum sql: ${revenue} ;; }
-  measure: sum_dropnet_revenue { type: sum sql: ${dropnet_revenue} ;; }
-  measure: sum_segment_revenue { type: sum sql: ${segment_revenue} ;; }
-
-  # Averages & Extremes
-  measure: avg_total     { type: average sql: ${total} ;; }
-  measure: avg_revenue   { type: average sql: ${revenue} ;; }
-  measure: max_total     { type: max sql: ${total} ;; }
-  measure: min_total     { type: min sql: ${total} ;; }
-
-  # Ratios (null-safe where possible)
-  measure: revenue_per_booking {
-    type: number
-    value_format: "#,##0.00"
-    sql: CASE WHEN ${bookings} > 0 THEN ${sum_revenue} / NULLIF(${bookings}, 0) END ;;
-  }
-
-  measure: margin_amount {
-    type: number
-    value_format: "#,##0.00"
-    sql: ${sum_revenue} - ${sum_supplier_fee} - ${sum_merchant_fee} ;;
-  }
-
-  measure: margin_pct {
-    type: number
-    value_format: "0.0%"
-    sql: CASE WHEN ${sum_revenue} <> 0 THEN (${margin_amount}) / NULLIF(${sum_revenue}, 0) END ;;
-  }
-
-  # Tag-based counts
-  measure: exception_rows {
-    type: count
-    filters: [has_exception: "yes"]
-  }
-
-  measure: original_rows {
-    type: count
-    filters: [is_original: "yes"]
-  }
 
 }
