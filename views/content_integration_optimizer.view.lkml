@@ -40,7 +40,7 @@ view: content_integration_optimizer {
         oc.candidacy,
         oc.gds,
         oc.gds_account_id,
-        oc.currency,
+        oc.currency AS candidate_currency,
         oc.fare_type,
         oc.validating_carrier,
         oc.pricing_options,
@@ -67,6 +67,7 @@ view: content_integration_optimizer {
         oa.trip_type,
         oa.affiliate_id,
         oa.target_id,
+        oa.currency AS attempt_currency,
 
         oab.booking_id,
 
@@ -137,7 +138,7 @@ view: content_integration_optimizer {
   }
 
   dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "General"}
-  dimension: currency             { type: string sql: ${TABLE}.currency ;; group_label: "General"}
+  dimension: candidate_currency   { type: string sql: ${TABLE}.candidate_currency ;; group_label: "General"}
   dimension: fare_type            { type: string sql: ${TABLE}.fare_type ;; group_label: "General"}
   dimension: validating_carrier   { type: string sql: ${TABLE}.validating_carrier ;; group_label: "General"}
   dimension: pricing_options      { type: string sql: ${TABLE}.pricing_options ;; group_label: "General"}
@@ -173,13 +174,16 @@ view: content_integration_optimizer {
     group_label: "Tags"
   }
 
-  # dimension: multicurrency {
-  #   type: string
-  #   sql: ${TABLE}.multicurrency_values ;;
-  #   group_label: "Tags"
-  # }
-  # need to rewrite it rely on the currency from original/attempt to the candidate
-
+  dimension: is_multicurrency {
+    type: yesno
+    sql: CASE
+          WHEN ${TABLE}.candidate_currency IS NOT NULL
+               AND ${TABLE}.candidate_currency <> ${TABLE}.attempt_currency
+          THEN TRUE
+          ELSE FALSE
+        END ;;
+    group_label: "Tags"
+  }
 
   dimension: multiticket_part {
     type: string
