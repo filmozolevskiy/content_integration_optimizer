@@ -71,7 +71,6 @@ view: content_integration_optimizer {
         oab.booking_id,
 
         ta.tag_pairs,
-        ta.original_values,
         ta.multiticketpart_values,
         ta.original_values,
         ta.alternative_marketing_carrier_values,
@@ -190,7 +189,7 @@ view: content_integration_optimizer {
 
   dimension: is_original {
     type: yesno
-    sql: CASE WHEN ${TABLE}.original_value LIKE 'Yes' THEN TRUE ELSE FALSE END ;;
+    sql: CASE WHEN ${TABLE}.original_values LIKE 'Yes' THEN TRUE ELSE FALSE END ;;
     group_label: "Tags"
   }
 
