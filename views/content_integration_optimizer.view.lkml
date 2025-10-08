@@ -17,20 +17,20 @@ view: content_integration_optimizer {
           /* Keep this mapping updated!!! */
           GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart' THEN oct.value END) AS multiticketpart_values,
           GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Original'        THEN 'Yes'       END) AS original_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'AlternativeMarketingCarrier'       THEN oct.value END) AS alternative_marketing_carrier,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Downgrade'       THEN oct.value END) AS downgrade,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'KiwiVirtualInterlining'       THEN oct.value END) AS kiwi_virtual_interlining,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MixedFareType'       THEN oct.value END) AS mixed_fare_type,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'NetUnderPub'       THEN oct.value END) AS net_under_pub,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'SearchBoosterDiscount'       THEN oct.value END) AS search_booster_discount,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'AlternativeMarketingCarrier'       THEN oct.value END) AS alternative_marketing_carrier_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Downgrade'       THEN oct.value END) AS downgrade_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'KiwiVirtualInterlining'       THEN oct.value END) AS kiwi_virtual_interlining_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MixedFareType'       THEN oct.value END) AS mixed_fare_type_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'NetUnderPub'       THEN oct.value END) AS net_under_pub_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'SearchBoosterDiscount'       THEN oct.value END) AS search_booster_discount_values,
           GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Exception'       THEN oct.value END) AS exception_values
 
         FROM ota.optimizer_candidate_tags oct
         JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
         GROUP BY oct.candidate_id
-      )
+        )
 
-      SELECT
+        SELECT
         oc.id as contestant_id,
         oc.created_at,
         oc.parent_id,
@@ -81,11 +81,11 @@ view: content_integration_optimizer {
         ta.search_booster_discount_values,
         ta.exception_values
 
-      FROM optimizer_candidates oc
-      LEFT JOIN optimizer_attempts oa ON oc.attempt_id = oa.id
-      LEFT JOIN optimizer_attempt_bookings oab ON oab.attempt_id = oa.id
-      LEFT JOIN pairs p ON oc.id = p.candidate_id
-      GROUP BY oc.id
+        FROM optimizer_candidates oc
+        LEFT JOIN optimizer_attempts oa ON oc.attempt_id = oa.id
+        LEFT JOIN optimizer_attempt_bookings oab ON oab.attempt_id = oa.id
+        LEFT JOIN tags_agg ta ON oc.id = ta.candidate_id
+        GROUP BY oc.id
       ;;
   }
 
