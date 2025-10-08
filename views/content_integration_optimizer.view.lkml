@@ -71,6 +71,7 @@ view: content_integration_optimizer {
         oab.booking_id,
 
         ta.tag_pairs,
+        ta.original_values,
         ta.multiticketpart_values,
         ta.original_values,
         ta.alternative_marketing_carrier_values,
