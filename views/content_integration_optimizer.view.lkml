@@ -1,11 +1,17 @@
 view: content_integration_optimizer {
 
+  parameter: start_date {
+    type: date
+    default_value: "2025-01-01"
+  }
+
   derived_table: {
     sql:
       WITH tags_agg AS (
         SELECT
           oct.candidate_id,
 
+          /* This field is for debugging - It shows all tags for a contestant */
           GROUP_CONCAT(
             DISTINCT CONCAT(
               ot.name, ':', COALESCE(CASE WHEN ot.name = 'Original' THEN 'Yes' ELSE oct.value END, '')
@@ -15,77 +21,75 @@ view: content_integration_optimizer {
           ) AS tag_pairs,
 
           /* Keep this mapping updated!!! */
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart' THEN oct.value END) AS multiticketpart_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Original'        THEN 'Yes'       END) AS original_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'AlternativeMarketingCarrier'       THEN oct.value END) AS alternative_marketing_carrier_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Downgrade'       THEN oct.value END) AS downgrade_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'KiwiVirtualInterlining'       THEN oct.value END) AS kiwi_virtual_interlining_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MixedFareType'       THEN oct.value END) AS mixed_fare_type_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'NetUnderPub'       THEN oct.value END) AS net_under_pub_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'SearchBoosterDiscount'       THEN oct.value END) AS search_booster_discount_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Exception'       THEN oct.value END) AS exception_values
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Exception' THEN oct.value END) AS exception_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart' THEN oct.value END) AS multiticket_part_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Downgrade' THEN oct.value END) AS downgrade_values,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MixedFareType' THEN 1 ELSE 0 END) AS is_mixed_fare_type,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'AlternativeMarketingCarrier' THEN 1 ELSE 0 END) AS is_alternative_marketing_carrier,
+          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Risky' THEN 1 ELSE 0 END) AS is_risky_values
 
         FROM ota.optimizer_candidate_tags oct
         JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+        WHERE oct.created_at > now() - interval 10 day
         GROUP BY oct.candidate_id
+
         )
 
         SELECT
-        oc.id as contestant_id,
-        oc.created_at,
-        oc.parent_id,
-        oc.attempt_id,
-        oc.reprice_index,
-        oc.rank,
-        oc.candidacy,
-        oc.gds,
-        oc.gds_account_id,
-        oc.currency AS candidate_currency,
-        oc.fare_type,
-        oc.validating_carrier,
-        oc.pricing_options,
-        oc.flight_numbers,
-        oc.commission_trip_id,
-        oc.base,
-        oc.tax,
-        oc.markup,
-        oc.total,
-        oc.commission,
-        oc.merchant_fee,
-        oc.supplier_fee,
-        oc.revenue,
-        oc.dropnet_revenue,
-        oc.segment_revenue,
-        oc.booking_classes,
-        oc.cabin_codes,
-        oc.fare_bases,
-        oc.fare_families,
+          oc.id as contestant_id,
+          oc.created_at,
+          oc.parent_id,
+          oc.attempt_id,
+          oc.reprice_type,
+          oc.reprice_index,
+          oc.rank,
+          oc.candidacy,
+          oc.gds,
+          oc.gds_account_id,
+          oc.currency,
+          oc.fare_type,
+          oc.validating_carrier,
+          oc.pricing_options,
+          oc.flight_numbers,
+          oc.commission_trip_id,
+          oc.base,
+          oc.tax,
+          oc.markup,
+          oc.total,
+          oc.commission,
+          oc.merchant_fee,
+          oc.supplier_fee,
+          oc.revenue,
+          oc.dropnet_revenue,
+          oc.segment_revenue,
+          oc.booking_classes,
+          oc.cabin_codes,
+          oc.fare_bases,
+          oc.fare_families,
 
-        oa.search_id,
-        oa.package_id,
-        oa.checkout_id,
-        oa.trip_type,
-        oa.affiliate_id,
-        oa.target_id,
-        oa.currency AS attempt_currency,
+          oa.search_id,
+          oa.package_id,
+          oa.checkout_id,
+          oa.trip_type,
+          oa.affiliate_id,
+          oa.target_id,
 
-        oab.booking_id,
+          oab.booking_id,
 
-        ta.tag_pairs,
-        ta.multiticketpart_values,
-        ta.original_values,
-        ta.alternative_marketing_carrier_values,
-        ta.downgrade_values,
-        ta.kiwi_virtual_interlining_values,
-        ta.mixed_fare_type_values,
-        ta.net_under_pub_values,
-        ta.search_booster_discount_values,
-        ta.exception_values
+          ta.tag_pairs,
+          ta.exception_values,
+          ta.multiticket_part_values,
+          ta.downgrade_values,
+          ta.is_mixed_fare_type,
+          ta.is_alternative_marketing_carrier,
+          ta.is_risky_values
+
 
         FROM optimizer_candidates oc
         LEFT JOIN optimizer_attempts oa ON oc.attempt_id = oa.id
-        LEFT JOIN optimizer_attempt_bookings oab ON oab.attempt_id = oa.id
+        LEFT JOIN optimizer_attempt_bookings oab ON oab.candidate_id = oc.id
         LEFT JOIN tags_agg ta ON oc.id = ta.candidate_id
+        WHERE oc.created_at > {% parameter start_date %}
         GROUP BY oc.id
       ;;
   }
@@ -165,8 +169,9 @@ view: content_integration_optimizer {
   dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; }
 
 
-  # ----- Tags -----
 
+
+  # ----- Tags -----
   dimension: tag_pairs {
     type: string
     description: "All tag key:value pairs (for debug only)."
@@ -251,6 +256,8 @@ view: content_integration_optimizer {
     group_label: "Tags"
   }
 
+  ## IS single to multy add a dimension
+
 
   # -------------------------
   # Measures
@@ -261,6 +268,7 @@ view: content_integration_optimizer {
     sql: ${contestant_id} ;;
   }
 
+  ## add some measures
 
 
 }
