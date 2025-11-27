@@ -30,7 +30,7 @@ view: content_integration_optimizer {
 
         FROM ota.optimizer_candidate_tags oct
         JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-        WHERE oct.created_at > now() - interval 10 day
+        WHERE oct.created_at > {% parameter start_date %}
         GROUP BY oct.candidate_id
 
         )

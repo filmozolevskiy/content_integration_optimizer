@@ -1,0 +1,53 @@
+---
+description: Database schema reference for optimizer tables
+---
+# Database Schema Reference (MySQL 8.0.43-34)
+
+## Schema Documentation
+Reference schemas are stored in [table schemas.sql](mdc:schemas/table schemas.sql). These are for reference only and show the structure of the optimizer tables.
+
+## Key Tables
+
+### optimizer_attempts
+Main table for optimizer attempts. Contains:
+- Search/package/checkout IDs
+- Pricing information (base, tax, markup, total, revenue)
+- Flight details (validating_carrier, flight_numbers, booking_classes)
+- Affiliate and target information
+
+### optimizer_candidates
+Main candidates table (referenced as `contestant_id` in the view). Contains:
+- Candidate metadata (parent_id, attempt_id, rank, candidacy)
+- Pricing and revenue fields
+- Flight and fare information
+
+### optimizer_candidate_tags
+Junction table linking candidates to tags. Contains:
+- `candidate_id` - Foreign key to optimizer_candidates
+- `tag_id` - Foreign key to optimizer_tags
+- `value` - Optional tag value
+
+### optimizer_tags
+Tag definitions. Contains:
+- `name` - Tag name (e.g., 'Exception', 'MultiTicketPart', 'Downgrade')
+- Unique constraint on name
+
+### optimizer_attempt_bookings
+Links attempts to bookings. Contains:
+- `attempt_id` - Foreign key to optimizer_attempts
+- `candidate_id` - Foreign key to optimizer_candidates
+- `booking_id` - Associated booking ID
+
+## Common Tag Names
+Based on the view code, these tag names are used:
+- `Exception`
+- `MultiTicketPart`
+- `Downgrade`
+- `MixedFareType`
+- `AlternativeMarketingCarrier`
+- `Risky`
+- `Original`
+
+## Important Notes
+- Tags are aggregated using `GROUP_CONCAT` with comma separation
+- Some tags are boolean flags (stored as 0/1), others have string values

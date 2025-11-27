@@ -1,0 +1,221 @@
+---
+globs: *.lkml,*.sql
+description: MySQL 8.0.43-34 syntax reference and patterns
+---
+# MySQL 8.0.43-34 Syntax Reference
+
+## Date and Time Functions
+
+### Date Arithmetic
+```sql
+-- Subtract days
+WHERE created_at > now() - interval 10 day
+WHERE created_at > DATE_SUB(NOW(), INTERVAL 10 DAY)
+
+-- Add days
+WHERE created_at < DATE_ADD(NOW(), INTERVAL 30 DAY)
+
+-- Date difference
+SELECT DATEDIFF(end_date, start_date) AS days_diff
+```
+
+### Date Formatting
+```sql
+-- Format dates
+DATE_FORMAT(created_at, '%Y-%m-%d')
+DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s')
+```
+
+## String Functions
+
+### Case Conversion
+```sql
+-- MySQL uses UPPER() and LOWER() (not upperUTF8)
+UPPER(column_name)
+LOWER(column_name)
+```
+
+### String Manipulation
+```sql
+-- Trim whitespace
+TRIM(column_name)
+LTRIM(column_name)
+RTRIM(column_name)
+
+-- Concatenation
+CONCAT(str1, str2, str3)
+CONCAT_WS(', ', str1, str2)  -- With separator
+
+-- Substring
+SUBSTRING(column_name, 1, 10)
+LEFT(column_name, 5)
+RIGHT(column_name, 5)
+
+-- Replace
+REPLACE(column_name, 'old', 'new')
+```
+
+## Aggregation Functions
+
+### GROUP_CONCAT (MySQL Specific)
+```sql
+-- Basic usage
+GROUP_CONCAT(DISTINCT column_name)
+
+-- With ordering and separator
+GROUP_CONCAT(
+  DISTINCT column_name
+  ORDER BY column_name
+  SEPARATOR ', '
+)
+
+-- Example from the view
+GROUP_CONCAT(
+  DISTINCT CONCAT(ot.name, ':', COALESCE(oct.value, ''))
+  ORDER BY ot.name, oct.value
+  SEPARATOR ', '
+) AS tag_pairs
+```
+
+## NULL Handling
+
+### COALESCE
+```sql
+-- Return first non-NULL value
+COALESCE(column1, column2, 'default')
+
+-- In CASE statements
+CASE
+  WHEN column IS NULL THEN 'Unknown'
+  ELSE column
+END
+```
+
+### NULLIF
+```sql
+-- Prevent division by zero
+numerator / NULLIF(denominator, 0)
+
+-- Return NULL if values match
+NULLIF(column, '')
+```
+
+## JSON Functions (MySQL 8.0)
+
+### JSON Extraction
+```sql
+-- Extract JSON value (returns JSON type)
+JSON_EXTRACT(json_column, '$.key_name')
+
+-- Extract and unquote (returns text)
+JSON_UNQUOTE(JSON_EXTRACT(json_column, '$.key_name'))
+
+-- Shorthand operators
+json_column->'$.key_name'        -- Returns JSON
+json_column->>'$.key_name'       -- Returns text (unquoted)
+```
+
+### JSON Creation
+```sql
+-- Create JSON object
+JSON_OBJECT('key1', value1, 'key2', value2)
+
+-- Create JSON array
+JSON_ARRAY(value1, value2, value3)
+```
+
+## Window Functions (MySQL 8.0)
+
+### Ranking Functions
+```sql
+-- Row number
+ROW_NUMBER() OVER (PARTITION BY category ORDER BY date DESC)
+
+-- Rank with gaps
+RANK() OVER (PARTITION BY category ORDER BY score DESC)
+
+-- Dense rank without gaps
+DENSE_RANK() OVER (PARTITION BY category ORDER BY score DESC)
+```
+
+### Value Functions
+```sql
+-- Previous/next value
+LAG(column, 1) OVER (PARTITION BY id ORDER BY date)
+LEAD(column, 1) OVER (PARTITION BY id ORDER BY date)
+
+-- First/last value
+FIRST_VALUE(column) OVER (PARTITION BY id ORDER BY date)
+LAST_VALUE(column) OVER (PARTITION BY id ORDER BY date)
+```
+
+### Aggregate Window Functions
+```sql
+-- Running totals
+SUM(amount) OVER (PARTITION BY category ORDER BY date)
+
+-- Moving averages
+AVG(amount) OVER (
+  PARTITION BY category 
+  ORDER BY date 
+  ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+)
+```
+
+## Common Table Expressions (CTEs)
+
+### Basic CTE
+```sql
+WITH tags_agg AS (
+  SELECT candidate_id, GROUP_CONCAT(tag_name) AS tags
+  FROM optimizer_candidate_tags
+  GROUP BY candidate_id
+)
+SELECT * FROM optimizer_candidates oc
+LEFT JOIN tags_agg ta ON oc.id = ta.candidate_id
+```
+
+### Multiple CTEs
+```sql
+WITH 
+  cte1 AS (SELECT ...),
+  cte2 AS (SELECT ... FROM cte1)
+SELECT * FROM cte2
+```
+
+## Common Patterns in This Project
+
+### Tag Aggregation Pattern
+```sql
+GROUP_CONCAT(
+  DISTINCT CASE WHEN ot.name = 'Exception' THEN oct.value END
+) AS exception_values
+```
+
+### Boolean Flag Pattern
+```sql
+GROUP_CONCAT(
+  DISTINCT CASE WHEN ot.name = 'Risky' THEN 1 ELSE 0 END
+) AS is_risky_values
+```
+
+### Date Filtering Pattern
+```sql
+WHERE oct.created_at > now() - interval 10 day
+WHERE oc.created_at > {% parameter start_date %}
+```
+
+## Performance Tips
+
+1. **Index Usage**: MySQL 8.0 can use indexes more efficiently with CTEs
+2. **Query Optimization**: Use `EXPLAIN` to analyze query plans
+3. **Date Filtering**: Always filter by date early in the query
+4. **GROUP_CONCAT**: Be mindful of `group_concat_max_len` setting for large aggregations
+5. **Window Functions**: Can be more efficient than correlated subqueries
+
+## Version-Specific Notes
+
+- **MySQL 8.0.43-34**: Full support for CTEs, window functions, and JSON
+- **Recursive CTEs**: Supported for hierarchical queries
+- **Generated Columns**: Can be used for computed values
+- **Functional Indexes**: Supported for expressions

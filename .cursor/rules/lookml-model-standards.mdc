@@ -1,0 +1,70 @@
+---
+globs: "*.model.lkml,*.ref.lkml"
+---
+# LookML Model File Standards
+
+## Model Files (`.model.lkml`)
+
+### Structure
+```lkml
+connection: "connection_name"
+
+# Include statements
+include: "/views/**/*.view.lkml"
+include: "model_name.ref.lkml"
+
+# Explores
+explore: explore_name {}
+```
+
+### Key Principles
+- Define the database connection at the top
+- Include all necessary view files using wildcards when appropriate
+- Include refinement files (`.ref.lkml`) for extensions
+- Keep explore definitions minimal in the base model
+
+## Refinement Files (`.ref.lkml`)
+
+### Purpose
+Refinement files extend base views without modifying the original definition. Use the `+` prefix to indicate a refinement.
+
+### Structure
+```lkml
+include: "/views/**/*.view.lkml"
+
+view: +view_name {
+  # Additional dimensions, measures, or overrides
+  dimension: new_dimension {
+    # Definition
+  }
+}
+```
+
+### Use Cases
+- Adding business logic dimensions (like tag-based calculations)
+- Extending views with complex CASE statements
+- Adding computed dimensions that combine base dimensions
+- Creating label dimensions that format IDs with names
+
+### Example Pattern
+If a refinement file exists, it would follow this pattern:
+```lkml
+view: +content_integration_optimizer {
+  dimension: tag_summary {
+    sql:
+      CASE
+        WHEN ${has_exception} THEN 'Has Exception'
+        WHEN ${is_risky_values} = 1 THEN 'Risky'
+        ELSE 'Standard'
+      END ;;
+    group_label: "Tags"
+  }
+}
+```
+
+**Note**: This project currently does not have a refinement file. Refinements would be added if needed to extend the base view without modifying the original file.
+
+## Include Best Practices
+- Use wildcards for flexibility: `/views/**/*.view.lkml`
+- Include refinement files after view includes
+- Keep includes organized and minimal

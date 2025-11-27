@@ -1,0 +1,18 @@
+---
+alwaysApply: true
+---
+# LookML Project Best Practices
+
+**IMPORTANT**: All work must be contained within this repository and Looker project only. Do not reference or suggest changes for other projects.
+
+## Core Principles
+1. **Read-Only Database**: Cannot modify the database, only query it
+2. **Refinement Pattern**: Use `.ref.lkml` files with `+` prefix for extending base views
+3. **Group Organization**: Use numbered group labels (e.g., "1. Time") and descriptive labels (e.g., "General", "Tags")
+4. **Hidden Helpers**: Mark intermediate dimensions as `hidden: yes` when they're only used in calculations
+
+## Reference Other Rules
+- **Project Structure**: See [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc)
+- **SQL Patterns**: See [lookml-sql-patterns.mdc](mdc:.cursor/rules/lookml-sql-patterns.mdc)
+- **MySQL Syntax**: See [mysql-8-syntax.mdc](mdc:.cursor/rules/mysql-8-syntax.mdc)
+- **Naming Conventions**: See [lookml-standards.mdc](mdc:.cursor/rules/lookml-standards.mdc)

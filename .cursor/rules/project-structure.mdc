@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+# Content Integration Optimizer - Project Structure
+
+## Project Overview
+This is a Looker project for Content Integration Optimizer analytics. The project connects to the `ota` database connection and provides insights into optimizer candidates, attempts, and bookings.
+
+## Project Structure
+- **models/**: Contains LookML model files
+  - [content_integration_optimizer.model.lkml](mdc:models/content_integration_optimizer.model.lkml) - Main model file defining the explore
+- **views/**: Contains LookML view files
+  - [content_integration_optimizer.view.lkml](mdc:views/content_integration_optimizer.view.lkml) - Main view with derived table and dimensions
+- **schemas/**: Contains database schema reference files
+  - [table schemas.sql](mdc:schemas/table schemas.sql) - Reference SQL schemas for optimizer tables
+
+## Database Connection
+- **Connection Name**: `ota`
+- **Database**: MySQL 8.0.43-34
+- **Key Tables**:
+  - `optimizer_candidates` - Main candidates table
+  - `optimizer_attempts` - Attempt records
+  - `optimizer_attempt_bookings` - Booking associations
+  - `optimizer_candidate_tags` - Tag associations
+  - `optimizer_tags` - Tag definitions
+
+## Key Concepts
+- **Contestant**: A candidate in the optimizer (referenced as `contestant_id` in the view)
+- **Tags**: Categorization system for candidates (Exception, MultiTicketPart, Downgrade, etc.)
+- **Derived Table**: The view uses a SQL-derived table that aggregates tags and joins multiple optimizer tables
+
+## File Organization
+- Model files define explores and connections
+- View files define derived tables, dimensions, and measures
+- Schema files are reference documentation only
