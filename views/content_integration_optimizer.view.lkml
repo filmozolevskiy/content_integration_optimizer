@@ -102,13 +102,14 @@ view: content_integration_optimizer {
     type: number
     sql: ${TABLE}.contestant_id ;;
     hidden: yes
+    group_label: "2. CONTESTANT INFO"
   }
 
   dimension_group: date {
     type: time
     timeframes: [raw, time, minute, hour, date, week, month, quarter, year]
     sql: ${TABLE}.created_at ;;
-    group_label: "1. Time"
+    group_label: "1. DATE"
   }
 
 
@@ -116,145 +117,147 @@ view: content_integration_optimizer {
   # Dimensions
   # -------------------------
 
-  dimension: parent_id            { type: number sql: ${TABLE}.parent_id ;; }
-  dimension: attempt_id           { type: number sql: ${TABLE}.attempt_id ;; }
-  dimension: booking_order        { type: number sql: ${TABLE}.rank ;; }
+  dimension: parent_id            { type: number sql: ${TABLE}.parent_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: attempt_id           { type: number sql: ${TABLE}.attempt_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: booking_order        { type: number sql: ${TABLE}.rank ;; group_label: "2. CONTESTANT INFO" }
 
-  dimension: search_id            { type: number sql: ${TABLE}.search_id ;; }
-  dimension: package_id           { type: number sql: ${TABLE}.package_id ;; }
-  dimension: checkout_id          { type: number sql: ${TABLE}.checkout_id ;; }
+  dimension: search_id            { type: number sql: ${TABLE}.search_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: package_id           { type: number sql: ${TABLE}.package_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: checkout_id          { type: number sql: ${TABLE}.checkout_id ;; group_label: "2. CONTESTANT INFO" }
 
-  dimension: affiliate_id         { type: number sql: ${TABLE}.affiliate_id ;; }
-  dimension: target_id            { type: number sql: ${TABLE}.target_id ;; }
-  dimension: booking_id           { type: number sql: ${TABLE}.booking_id ;; }
+  dimension: affiliate_id         { type: number sql: ${TABLE}.affiliate_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: target_id            { type: number sql: ${TABLE}.target_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: booking_id           { type: number sql: ${TABLE}.booking_id ;; group_label: "2. CONTESTANT INFO" }
 
-  dimension: gds_account_id       { type: number sql: ${TABLE}.gds_account_id ;; }
-  dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; }
+  dimension: gds_account_id       { type: number sql: ${TABLE}.gds_account_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; group_label: "2. CONTESTANT INFO" }
+
+  dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "2. CONTESTANT INFO"}
+  dimension: fare_type            { type: string sql: ${TABLE}.fare_type ;; group_label: "2. CONTESTANT INFO"}
+  dimension: validating_carrier   { type: string sql: ${TABLE}.validating_carrier ;; group_label: "2. CONTESTANT INFO"}
+  dimension: pricing_options      { type: string sql: ${TABLE}.pricing_options ;; group_label: "2. CONTESTANT INFO"}
+  dimension: flight_numbers       { type: string sql: ${TABLE}.flight_numbers ;; group_label: "2. CONTESTANT INFO"}
+  dimension: booking_classes      { type: string sql: ${TABLE}.booking_classes ;; group_label: "2. CONTESTANT INFO"}
+  dimension: cabin_codes          { type: string sql: ${TABLE}.cabin_codes ;; group_label: "2. CONTESTANT INFO"}
+  dimension: fare_bases           { type: string sql: ${TABLE}.fare_bases ;; group_label: "2. CONTESTANT INFO"}
+  dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "2. CONTESTANT INFO"}
+  dimension: trip_type            { type: string sql: ${TABLE}.trip_type ;; group_label: "2. CONTESTANT INFO"}
 
   # ----- Categorical -----
   dimension: candidacy {
     type: string
     sql: ${TABLE}.candidacy ;;
     description: "Candidate eligibility status"
-    group_label: "General"
+    group_label: "3. BUCKETS"
     suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
 
   }
 
-  dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "General"}
-  dimension: candidate_currency   { type: string sql: ${TABLE}.candidate_currency ;; group_label: "General"}
-  dimension: fare_type            { type: string sql: ${TABLE}.fare_type ;; group_label: "General"}
-  dimension: validating_carrier   { type: string sql: ${TABLE}.validating_carrier ;; group_label: "General"}
-  dimension: pricing_options      { type: string sql: ${TABLE}.pricing_options ;; group_label: "General"}
-  dimension: flight_numbers       { type: string sql: ${TABLE}.flight_numbers ;; group_label: "General"}
-  dimension: booking_classes      { type: string sql: ${TABLE}.booking_classes ;; group_label: "General"}
-  dimension: cabin_codes          { type: string sql: ${TABLE}.cabin_codes ;; group_label: "General"}
-  dimension: fare_bases           { type: string sql: ${TABLE}.fare_bases ;; group_label: "General"}
-  dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "General"}
-  dimension: trip_type            { type: string sql: ${TABLE}.trip_type ;; group_label: "General"}
-
   # ----- Monetary -----
-  dimension: base                 { type: number value_format: "#,##0.00" sql: ${TABLE}.base ;; }
-  dimension: tax                  { type: number value_format: "#,##0.00" sql: ${TABLE}.tax ;; }
-  dimension: markup               { type: number value_format: "#,##0.00" sql: ${TABLE}.markup ;; }
-  dimension: total                { type: number value_format: "#,##0.00" sql: ${TABLE}.total ;; }
+  dimension: candidate_currency   { type: string sql: ${TABLE}.candidate_currency ;; group_label: "MONETARY"}
+  dimension: base                 { type: number value_format: "#,##0.00" sql: ${TABLE}.base ;; group_label: "MONETARY" }
+  dimension: tax                  { type: number value_format: "#,##0.00" sql: ${TABLE}.tax ;; group_label: "MONETARY" }
+  dimension: markup               { type: number value_format: "#,##0.00" sql: ${TABLE}.markup ;; group_label: "MONETARY" }
+  dimension: total                { type: number value_format: "#,##0.00" sql: ${TABLE}.total ;; group_label: "MONETARY" }
 
-  dimension: merchant_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.merchant_fee ;; }
-  dimension: supplier_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.supplier_fee ;; }
+  dimension: merchant_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.merchant_fee ;; group_label: "MONETARY" }
+  dimension: supplier_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.supplier_fee ;; group_label: "MONETARY" }
 
-  dimension: commission           { type: number value_format: "#,##0.00" sql: ${TABLE}.commission ;; }
-  dimension: dropnet_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.dropnet_revenue ;; }
-  dimension: segment_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.segment_revenue ;; }
+  dimension: commission           { type: number value_format: "#,##0.00" sql: ${TABLE}.commission ;; group_label: "MONETARY" }
+  dimension: dropnet_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.dropnet_revenue ;; group_label: "MONETARY" }
+  dimension: segment_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.segment_revenue ;; group_label: "MONETARY" }
 
-  dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; }
-
-
+  dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; group_label: "MONETARY" }
 
 
-  # ----- Tags -----
-  dimension: tag_pairs {
-    type: string
-    description: "All tag key:value pairs (for debug only)."
-    sql: ${TABLE}.tag_pairs ;;
-    group_label: "Tags"
-  }
 
+
+  # ----- Contestant Info (Tag-related) -----
   dimension: is_multicurrency {
     type: yesno
     sql: CASE
           WHEN ${TABLE}.candidate_currency IS NOT NULL
-               AND ${TABLE}.candidate_currency <> ${TABLE}.attempt_currency
+               AND ${TABLE}.currency IS NOT NULL
+               AND ${TABLE}.candidate_currency <> ${TABLE}.currency
           THEN TRUE
           ELSE FALSE
         END ;;
-    group_label: "Tags"
-  }
-
-  dimension: multiticket_part {
-    type: string
-    sql: ${TABLE}.multiticketpart_values ;;
-    group_label: "Tags"
+    group_label: "2. CONTESTANT INFO"
+    hidden: yes
+    description: "Check if candidate currency differs from attempt currency."
   }
 
   dimension: is_original {
     type: yesno
-    sql: CASE WHEN ${TABLE}.original_values LIKE 'Yes' THEN TRUE ELSE FALSE END ;;
-    group_label: "Tags"
+    sql: CASE 
+          WHEN ${tag_pairs} LIKE '%Original:Yes%' THEN TRUE 
+          ELSE FALSE 
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Check if candidate has Original tag. Derived from tag_pairs field since original_values not in derived table."
+  }
+
+  dimension: multiticket_part {
+    type: string
+    sql: ${TABLE}.multiticket_part_values ;;
+    group_label: "2. CONTESTANT INFO"
   }
 
   dimension: reprice_index {
     type: string
     sql: ${TABLE}.reprice_index ;;
-    group_label: "Tags"
+    group_label: "2. CONTESTANT INFO"
   }
 
   dimension: has_exception {
     type: yesno
     sql: CASE WHEN ${exception_values} IS NOT NULL AND ${exception_values} <> '' THEN TRUE ELSE FALSE END ;;
-    group_label: "Tags"
+    group_label: "2. CONTESTANT INFO"
+    description: "Only ineligible candidates have an exception."
+    hidden: yes
   }
 
   dimension: exception_values {
     type: string
     sql: ${TABLE}.exception_values ;;
-    group_label: "Tags"
+    group_label: "2. CONTESTANT INFO"
   }
 
-  dimension: alternative_marketing_carrier_values {
-    type: string
-    sql: ${TABLE}.alternative_marketing_carrier_values ;;
-    group_label: "Tags"
+  dimension: is_alternative_marketing_carrier {
+    type: yesno
+    sql: CASE WHEN ${TABLE}.is_alternative_marketing_carrier LIKE '%1%' THEN TRUE ELSE FALSE END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Check if candidate has AlternativeMarketingCarrier tag"
   }
 
   dimension: downgrade_values {
     type: string
     sql: ${TABLE}.downgrade_values ;;
-    group_label: "Tags"
+    group_label: "2. CONTESTANT INFO"
   }
 
-  dimension: kiwi_virtual_interlining_values {
-    type: string
-    sql: ${TABLE}.kiwi_virtual_interlining_values ;;
-    group_label: "Tags"
+  dimension: is_mixed_fare_type {
+    type: yesno
+    sql: CASE WHEN ${TABLE}.is_mixed_fare_type LIKE '%1%' THEN TRUE ELSE FALSE END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Check if candidate has MixedFareType tag"
   }
 
-  dimension: mixed_fare_type_values {
-    type: string
-    sql: ${TABLE}.mixed_fare_type_values ;;
-    group_label: "Tags"
+  dimension: is_risky {
+    type: yesno
+    sql: CASE WHEN ${TABLE}.is_risky_values LIKE '%1%' THEN TRUE ELSE FALSE END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Check if candidate has Risky tag"
   }
 
-  dimension: net_under_pub_values {
+  # ----- Tags (Debug) -----
+  dimension: tag_pairs {
     type: string
-    sql: ${TABLE}.net_under_pub_values ;;
-    group_label: "Tags"
+    description: "All tag key:value pairs (for debug only)."
+    sql: ${TABLE}.tag_pairs ;;
+    group_label: "TAGS"
   }
 
-  dimension: search_booster_discount_values {
-    type: string
-    sql: ${TABLE}.search_booster_discount_values ;;
-    group_label: "Tags"
-  }
 
   ## IS single to multy add a dimension
 
@@ -266,6 +269,9 @@ view: content_integration_optimizer {
   measure: all_contestants_count {
     type: count_distinct
     sql: ${contestant_id} ;;
+    label: "All Contestants Count"
+    description: "Count of distinct contestants (candidates)"
+    group_label: "Counts"
   }
 
   ## add some measures
