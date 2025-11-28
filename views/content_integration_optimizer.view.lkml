@@ -281,6 +281,23 @@ view: content_integration_optimizer {
     group_label: "Counts"
   }
 
+  measure: eligible_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${candidacy} = 'Eligible' THEN ${contestant_id} END ;;
+    label: "Eligible Contestants Count"
+    description: "Count of distinct contestants with candidacy = 'Eligible'"
+    group_label: "Counts"
+  }
+
+  measure: eligibility_rate {
+    type: number
+    sql: ${eligible_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Eligibility Rate"
+    description: "Percentage of eligible contestants out of all contestants"
+    group_label: "Rates"
+  }
+
   ## add some measures
 
 
