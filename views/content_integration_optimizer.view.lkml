@@ -14,25 +14,24 @@ view: content_integration_optimizer {
           /* This field is for debugging - It shows all tags for a contestant */
           GROUP_CONCAT(
             DISTINCT CONCAT(
-              ot.name, ':', COALESCE(CASE WHEN ot.name = 'Original' THEN 'Yes' ELSE oct.value END, '')
+                ot.name, ':', COALESCE(oct.value, '')
             )
             ORDER BY ot.name, oct.value
             SEPARATOR ', '
           ) AS tag_pairs,
 
           /* Keep this mapping updated!!! */
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Exception' THEN oct.value END) AS exception_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart' THEN oct.value END) AS multiticket_part_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Downgrade' THEN oct.value END) AS downgrade_values,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MixedFareType' THEN 1 ELSE 0 END) AS is_mixed_fare_type,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'AlternativeMarketingCarrier' THEN 1 ELSE 0 END) AS is_alternative_marketing_carrier,
-          GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Risky' THEN 1 ELSE 0 END) AS is_risky_values
+          CASE WHEN ot.name = 'Exception' THEN oct.value END AS exception_values,
+          CASE WHEN ot.name = 'MultiTicketPart' THEN oct.value END AS multiticket_part_values,
+          CASE WHEN ot.name = 'Downgrade' THEN oct.value END AS downgrade_values,
+          CASE WHEN ot.name = 'MixedFareType' THEN 1 ELSE 0 END AS is_mixed_fare_type,
+          CASE WHEN ot.name = 'AlternativeMarketingCarrier' THEN 1 ELSE 0 END AS is_alternative_marketing_carrier,
+          CASE WHEN ot.name = 'Risky' THEN 1 ELSE 0 END AS is_risky_values
 
         FROM ota.optimizer_candidate_tags oct
         JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
         WHERE oct.created_at > {% parameter start_date %}
         GROUP BY oct.candidate_id
-
         )
 
         SELECT
@@ -189,12 +188,12 @@ view: content_integration_optimizer {
 
   dimension: is_original {
     type: yesno
-    sql: CASE 
-          WHEN ${tag_pairs} LIKE '%Original:Yes%' THEN TRUE 
-          ELSE FALSE 
+    sql: CASE
+          WHEN ${TABLE}.reprice_type = 'original' THEN TRUE
+          ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "Check if candidate has Original tag. Derived from tag_pairs field since original_values not in derived table."
+    description: "Check if candidate came from search."
   }
 
   dimension: multiticket_part {
