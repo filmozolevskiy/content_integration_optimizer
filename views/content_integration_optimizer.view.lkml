@@ -273,6 +273,14 @@ view: content_integration_optimizer {
     group_label: "Counts"
   }
 
+  measure: bookings_count {
+    type: count_distinct
+    sql: ${booking_id} ;;
+    label: "Bookings Count"
+    description: "Count of distinct bookings"
+    group_label: "Counts"
+  }
+
   ## add some measures
 
 
