@@ -83,7 +83,6 @@ view: content_integration_optimizer {
           ta.is_alternative_marketing_carrier,
           ta.is_risky_values
 
-
         FROM optimizer_candidates oc
         LEFT JOIN optimizer_attempts oa ON oc.attempt_id = oa.id
         LEFT JOIN optimizer_attempt_bookings oab ON oab.candidate_id = oc.id
@@ -127,6 +126,19 @@ view: content_integration_optimizer {
   dimension: affiliate_id         { type: number sql: ${TABLE}.affiliate_id ;; group_label: "2. CONTESTANT INFO" }
   dimension: target_id            { type: number sql: ${TABLE}.target_id ;; group_label: "2. CONTESTANT INFO" }
   dimension: booking_id           { type: number sql: ${TABLE}.booking_id ;; group_label: "2. CONTESTANT INFO" }
+
+  dimension: debug_link {
+    type: string
+    sql: CASE 
+      WHEN ${booking_id} IS NOT NULL 
+      THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', ${booking_id})
+      ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', ${search_id})
+    END ;;
+    html: <a href="{{ value }}" target="_blank">View</a> ;;
+    label: "Debug Link"
+    description: "Link to booking page with booking_id if booking exists, otherwise link to debug logs with search_id"
+    group_label: "2. CONTESTANT INFO"
+  }
 
   dimension: gds_account_id       { type: number sql: ${TABLE}.gds_account_id ;; group_label: "2. CONTESTANT INFO" }
   dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; group_label: "2. CONTESTANT INFO" }
@@ -247,6 +259,23 @@ view: content_integration_optimizer {
     sql: CASE WHEN ${TABLE}.is_risky_values LIKE '%1%' THEN TRUE ELSE FALSE END ;;
     group_label: "2. CONTESTANT INFO"
     description: "Check if candidate has Risky tag"
+  }
+
+  dimension: is_unique_contestant {
+    type: yesno
+    sql: CASE 
+          WHEN (
+            SELECT COUNT(DISTINCT oc2.gds)
+            FROM optimizer_candidates oc2
+            WHERE oc2.attempt_id = ${attempt_id}
+              AND oc2.candidacy = 'Eligible'
+              AND oc2.created_at > {% parameter start_date %}
+          ) = 1 
+          THEN TRUE 
+          ELSE FALSE 
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True when the attempt_id has only one distinct GDS value across eligible contestants"
   }
 
   # ----- Tags (Debug) -----
