@@ -130,11 +130,11 @@ view: content_integration_optimizer {
   dimension: debug_link {
     type: string
     sql:
-      CASE
-        WHEN ${TABLE}.booking_id IS NOT NULL
-          THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${TABLE}.booking_id AS CHAR))
-          ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', CAST(${TABLE}.search_id AS CHAR)
-      END ;;
+    CASE
+      WHEN ${TABLE}.booking_id IS NOT NULL
+      THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${TABLE}.booking_id AS CHAR))
+      ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', CAST(${TABLE}.search_id AS CHAR))
+    END ;;
     link: {
       label: "Debug Link"
       url: "{{ value }}"
