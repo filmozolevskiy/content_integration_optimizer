@@ -129,13 +129,16 @@ view: content_integration_optimizer {
 
   dimension: debug_link {
     type: string
-    sql: CASE 
-      WHEN ${booking_id} IS NOT NULL 
-      THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', ${booking_id})
-      ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', ${search_id})
-    END ;;
-    html: <a href="{{ value }}" target="_blank">View</a> ;;
-    label: "Debug Link"
+    sql:
+      CASE
+        WHEN ${TABLE}.booking_id IS NOT NULL
+          THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${TABLE}.booking_id AS CHAR))
+          ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', CAST(${TABLE}.search_id AS CHAR)
+      END ;;
+    link: {
+      label: "Debug Link"
+      url: "{{ value }}"
+    }
     description: "Link to booking page with booking_id if booking exists, otherwise link to debug logs with search_id"
     group_label: "2. CONTESTANT INFO"
   }
@@ -263,16 +266,16 @@ view: content_integration_optimizer {
 
   dimension: is_unique_contestant {
     type: yesno
-    sql: CASE 
+    sql: CASE
           WHEN (
             SELECT COUNT(DISTINCT oc2.gds)
             FROM optimizer_candidates oc2
             WHERE oc2.attempt_id = ${attempt_id}
               AND oc2.candidacy = 'Eligible'
               AND oc2.created_at > {% parameter start_date %}
-          ) = 1 
-          THEN TRUE 
-          ELSE FALSE 
+          ) = 1
+          THEN TRUE
+          ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
     description: "True when the attempt_id has only one distinct GDS value across eligible contestants"
