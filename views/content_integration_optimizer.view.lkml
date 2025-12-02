@@ -129,9 +129,8 @@ view: content_integration_optimizer {
 
   dimension: debug_link {
     type: string
-    sql:
-    CASE
-      WHEN ${TABLE}.booking_id IS NOT NULL
+    sql: CASE 
+      WHEN ${TABLE}.booking_id IS NOT NULL 
       THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${TABLE}.booking_id AS CHAR))
       ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', CAST(${TABLE}.search_id AS CHAR))
     END ;;
@@ -274,11 +273,34 @@ view: content_integration_optimizer {
               AND oc2.candidacy = 'Eligible'
               AND oc2.created_at > {% parameter start_date %}
           ) = 1
+          AND (
+            SELECT COUNT(*)
+            FROM optimizer_candidates oc3
+            WHERE oc3.attempt_id = ${attempt_id}
+              AND oc3.created_at > {% parameter start_date %}
+              AND oc3.candidacy <> 'Eligible'
+          ) >= 1
           THEN TRUE
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the attempt_id has only one distinct GDS value across eligible contestants"
+    description: "True when the attempt_id has only one distinct GDS across eligible contestants and at least one contestant in other candidacy buckets"
+  }
+
+  dimension: is_optimizer_off {
+    type: yesno
+    sql: CASE
+          WHEN (
+            SELECT COUNT(*)
+            FROM optimizer_candidates oc2
+            WHERE oc2.attempt_id = ${attempt_id}
+              AND oc2.created_at > {% parameter start_date %}
+          ) = 1
+          THEN TRUE
+          ELSE FALSE
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True when the optimization attempt has only one contestant (optimizer likely off)"
   }
 
   # ----- Tags (Debug) -----
