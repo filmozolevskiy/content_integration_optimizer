@@ -267,7 +267,13 @@ view: content_integration_optimizer {
     type: yesno
     sql: CASE
           WHEN (
-            SELECT COUNT(DISTINCT oc2.gds)
+            SELECT COUNT(DISTINCT 
+              CASE 
+                WHEN oc2.gds = 'Amadeus' 
+                THEN CONCAT('Amadeus:', CAST(COALESCE(oc2.gds_account_id, 0) AS CHAR))
+                ELSE oc2.gds
+              END
+            )
             FROM optimizer_candidates oc2
             WHERE oc2.attempt_id = ${attempt_id}
               AND oc2.candidacy = 'Eligible'
@@ -284,7 +290,7 @@ view: content_integration_optimizer {
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the attempt_id has only one distinct GDS across eligible contestants and at least one contestant in other candidacy buckets"
+    description: "True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets"
   }
 
   dimension: is_optimizer_off {
