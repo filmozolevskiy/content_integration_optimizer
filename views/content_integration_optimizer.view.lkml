@@ -400,6 +400,24 @@ view: content_integration_optimizer {
     group_label: "Rates"
   }
 
+  measure: unique_content_proportion {
+    type: number
+    sql: ${unique_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Unique Content Proportion"
+    description: "Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
+    group_label: "Rates"
+  }
+
+  measure: unique_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_unique_contestant} = TRUE THEN ${contestant_id} END ;;
+    label: "Unique Contestants Count"
+    description: "Count of distinct contestants with unique content sources"
+    group_label: "Counts"
+    hidden: yes
+  }
+
   ## add some measures
 
 
