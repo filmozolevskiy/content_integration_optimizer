@@ -309,6 +309,48 @@ view: content_integration_optimizer {
     description: "True when the optimization attempt has only one contestant (optimizer likely off)"
   }
 
+  dimension: is_optimized {
+    type: yesno
+    sql: CASE
+          WHEN ${TABLE}.booking_id IS NOT NULL THEN
+            CASE
+              WHEN (
+                SELECT oc_orig.id
+                FROM optimizer_candidates oc_orig
+                WHERE oc_orig.attempt_id = ${attempt_id}
+                  AND oc_orig.reprice_type = 'original'
+                  AND oc_orig.created_at > {% parameter start_date %}
+                LIMIT 1
+              ) IS NULL THEN FALSE
+              WHEN ${contestant_id} <> (
+                SELECT oc_orig.id
+                FROM optimizer_candidates oc_orig
+                WHERE oc_orig.attempt_id = ${attempt_id}
+                  AND oc_orig.reprice_type = 'original'
+                  AND oc_orig.created_at > {% parameter start_date %}
+                LIMIT 1
+              ) THEN TRUE
+              WHEN (
+                ${gds} = (SELECT oc_orig.gds FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1)
+                AND COALESCE(${gds_account_id}, 0) = COALESCE((SELECT oc_orig.gds_account_id FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), 0)
+                AND COALESCE(${fare_type}, '') = COALESCE((SELECT oc_orig.fare_type FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), '')
+                AND COALESCE(${multiticket_part}, '') = COALESCE((SELECT oc_orig.multiticket_part_values FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), '')
+                AND COALESCE(${TABLE}.currency, '') = COALESCE((SELECT oc_orig.currency FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), '')
+                AND COALESCE(${base}, 0) = COALESCE((SELECT oc_orig.base FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), 0)
+                AND COALESCE(${tax}, 0) = COALESCE((SELECT oc_orig.tax FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), 0)
+                AND COALESCE(${validating_carrier}, '') = COALESCE((SELECT oc_orig.validating_carrier FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), '')
+                AND COALESCE(${pricing_options}, '') = COALESCE((SELECT oc_orig.pricing_options FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), '')
+                AND COALESCE(${markup}, 0) = COALESCE((SELECT oc_orig.markup FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), 0)
+                AND COALESCE(${revenue}, 0) = COALESCE((SELECT oc_orig.revenue FROM optimizer_candidates oc_orig WHERE oc_orig.attempt_id = ${attempt_id} AND oc_orig.reprice_type = 'original' AND oc_orig.created_at > {% parameter start_date %} LIMIT 1), 0)
+              ) THEN TRUE
+              ELSE FALSE
+            END
+          ELSE FALSE
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True if the booked contestant is not the original one (optimized) or identical to the original (to avoid counting duplicates). Compares gds, gds_account_id, fare_type, multiticket_part, currency, base, tax, validating_carrier, pricing_options, markup, revenue."
+  }
+
   # ----- Tags (Debug) -----
   dimension: tag_pairs {
     type: string
