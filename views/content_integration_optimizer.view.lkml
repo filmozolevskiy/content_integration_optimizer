@@ -129,8 +129,8 @@ view: content_integration_optimizer {
 
   dimension: debug_link {
     type: string
-    sql: CASE 
-      WHEN ${TABLE}.booking_id IS NOT NULL 
+    sql: CASE
+      WHEN ${TABLE}.booking_id IS NOT NULL
       THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${TABLE}.booking_id AS CHAR))
       ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', CAST(${TABLE}.search_id AS CHAR))
     END ;;
@@ -142,7 +142,7 @@ view: content_integration_optimizer {
     group_label: "2. CONTESTANT INFO"
   }
 
-  dimension: gds_account_id       { type: number sql: ${TABLE}.gds_account_id ;; group_label: "2. CONTESTANT INFO" }
+  dimension: gds_account_id       { type: string sql: ${TABLE}.gds_account_id ;; group_label: "2. CONTESTANT INFO" }
   dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; group_label: "2. CONTESTANT INFO" }
 
   dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "2. CONTESTANT INFO"}
@@ -267,9 +267,9 @@ view: content_integration_optimizer {
     type: yesno
     sql: CASE
           WHEN (
-            SELECT COUNT(DISTINCT 
-              CASE 
-                WHEN oc2.gds = 'Amadeus' 
+            SELECT COUNT(DISTINCT
+              CASE
+                WHEN oc2.gds = 'Amadeus'
                 THEN CONCAT('Amadeus:', CAST(COALESCE(oc2.gds_account_id, 0) AS CHAR))
                 ELSE oc2.gds
               END
@@ -312,7 +312,7 @@ view: content_integration_optimizer {
   dimension: is_optimized {
     type: yesno
     sql: CASE
-          WHEN ${TABLE}.booking_id IS NOT NULL 
+          WHEN ${TABLE}.booking_id IS NOT NULL
             AND ${contestant_id} <> (
               SELECT oc_orig.id
               FROM optimizer_candidates oc_orig
