@@ -24,6 +24,13 @@ view: content_integration_optimizer {
     group_label: "2. CONTESTANT INFO"
   }
 
+  dimension: candidate_id {
+    type: number
+    sql: ${TABLE}.id ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Primary key of optimizer_candidates (same value as hidden contestant_id used in measures)."
+  }
+
   dimension_group: date {
     type: time
     timeframes: [raw, time, minute, hour, date, week, month, quarter, year]
