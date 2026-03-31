@@ -132,14 +132,7 @@ view: content_integration_optimizer {
 
   dimension: multiticket_part {
     type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'MultiTicketPart'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
+    sql: ${tags_agg.multiticket_part_values} ;;
     group_label: "2. CONTESTANT INFO"
   }
 
@@ -151,14 +144,7 @@ view: content_integration_optimizer {
 
   dimension: exception_values {
     type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Exception'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
+    sql: ${tags_agg.exception_values} ;;
     group_label: "2. CONTESTANT INFO"
   }
 
@@ -172,55 +158,27 @@ view: content_integration_optimizer {
 
   dimension: is_alternative_marketing_carrier {
     type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'AlternativeMarketingCarrier'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
+    sql: ${tags_agg.is_alternative_marketing_carrier} ;;
     group_label: "2. CONTESTANT INFO"
     description: "Check if candidate has AlternativeMarketingCarrier tag"
   }
 
   dimension: downgrade_values {
     type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Downgrade'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
+    sql: ${tags_agg.downgrade_values} ;;
     group_label: "2. CONTESTANT INFO"
   }
 
   dimension: is_mixed_fare_type {
     type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'MixedFareType'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
+    sql: ${tags_agg.is_mixed_fare_type} ;;
     group_label: "2. CONTESTANT INFO"
     description: "Check if candidate has MixedFareType tag"
   }
 
   dimension: is_risky {
     type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Risky'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
+    sql: ${tags_agg.is_risky} ;;
     group_label: "2. CONTESTANT INFO"
     description: "Check if candidate has Risky tag"
   }
@@ -293,17 +251,7 @@ view: content_integration_optimizer {
   dimension: tag_pairs {
     type: string
     description: "All tag key:value pairs (for debug only)."
-    sql: (
-      SELECT GROUP_CONCAT(
-        DISTINCT CONCAT(ot.name, ':', COALESCE(oct.value, ''))
-        ORDER BY ot.name, oct.value
-        SEPARATOR ', '
-      )
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
+    sql: ${tags_agg.tag_pairs} ;;
     group_label: "TAGS"
   }
 

@@ -21,4 +21,10 @@ explore: content_integration_optimizer {
       ${optimizer_attempt_bookings.candidate_id} = ${content_integration_optimizer.id}
       AND ${optimizer_attempt_bookings.attempt_id} = ${content_integration_optimizer.attempt_id} ;;
   }
+
+  join: tags_agg {
+    type: left_outer
+    relationship: one_to_one
+    sql_on: ${tags_agg.candidate_id} = ${content_integration_optimizer.id} ;;
+  }
 }
