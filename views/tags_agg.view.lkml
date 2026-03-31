@@ -1,6 +1,9 @@
+# NDT must use the same explore that joins tags_agg: bind_all_filters is only allowed
+# on that explore. Looker omits unneeded joins (e.g. tags_agg) from this subquery when
+# only content_integration_optimizer.id is selected.
 view: tags_agg_base {
   derived_table: {
-    explore_source: content_integration_optimizer_tags_seed {
+    explore_source: content_integration_optimizer {
       column: id { field: content_integration_optimizer.id }
       bind_all_filters: yes
     }
