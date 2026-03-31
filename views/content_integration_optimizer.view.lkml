@@ -22,13 +22,7 @@ view: content_integration_optimizer {
     sql: ${TABLE}.id ;;
     hidden: yes
     group_label: "2. CONTESTANT INFO"
-  }
-
-  dimension: candidate_id {
-    type: number
-    sql: ${TABLE}.id ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "Primary key of optimizer_candidates (same value as hidden contestant_id used in measures)."
+    description: "Primary key of optimizer_candidates."
   }
 
   dimension_group: date {
@@ -183,7 +177,7 @@ view: content_integration_optimizer {
     description: "Check if candidate has Risky tag"
   }
 
-  dimension: is_unique_contestant {
+  dimension: is_unique_content {
     type: yesno
     sql: CASE
           WHEN (
@@ -210,7 +204,8 @@ view: content_integration_optimizer {
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets"
+    description: "NOTE! VERY HAVY! True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets"
+    hidden: yes
   }
 
   dimension: is_optimizer_off {
@@ -226,7 +221,8 @@ view: content_integration_optimizer {
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the optimization attempt has only one contestant (optimizer likely off)"
+    description: "NOTE! VERY HAVY! True when the optimization attempt has only one contestant (optimizer likely off)"
+    hidden: yes
   }
 
   dimension: is_optimized {
@@ -245,7 +241,8 @@ view: content_integration_optimizer {
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True if the booked contestant is not the original one (optimized)"
+    description: "NOTE! VERY HAVY! True if the booked contestant is not the original one (optimized)"
+    hidden: yes
   }
 
   dimension: tag_pairs {
@@ -295,19 +292,18 @@ view: content_integration_optimizer {
     sql: ${unique_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
     value_format: "0.00%"
     label: "Unique Content Proportion"
-    description: "Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
+    description: "NOTE! VERY HAVY! Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
     group_label: "Rates"
+    hidden: yes
   }
 
   measure: unique_contestants_count {
     type: count_distinct
-    sql: CASE WHEN ${is_unique_contestant} = TRUE THEN ${contestant_id} END ;;
+    sql: CASE WHEN ${is_unique_content} = TRUE THEN ${contestant_id} END ;;
     label: "Unique Contestants Count"
-    description: "Count of distinct contestants with unique content sources"
+    description: "NOTE! VERY HAVY! Count of distinct contestants with unique content sources"
     group_label: "Counts"
     hidden: yes
   }
-
-  ## add some measures
 
 }
