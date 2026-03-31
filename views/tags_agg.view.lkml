@@ -1,6 +1,6 @@
 view: tags_agg_base {
   derived_table: {
-    explore_source: content_integration_optimizer {
+    explore_source: content_integration_optimizer_tags_seed {
       column: id { field: content_integration_optimizer.id }
       bind_all_filters: yes
     }
