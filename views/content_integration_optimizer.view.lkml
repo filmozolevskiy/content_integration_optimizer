@@ -20,7 +20,6 @@ view: content_integration_optimizer {
   dimension: contestant_id {
     type: number
     sql: ${TABLE}.id ;;
-    hidden: yes
     group_label: "2. CONTESTANT INFO"
   }
 
@@ -245,7 +244,7 @@ view: content_integration_optimizer {
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets"
+    description: "NOTE! Very heavy! True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets"
   }
 
   dimension: is_optimizer_off {
@@ -280,12 +279,11 @@ view: content_integration_optimizer {
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True if the booked contestant is not the original one (optimized)"
+    description: "NOTE! Very heavy! True if the booked contestant is not the original one (optimized)"
   }
 
   dimension: tag_pairs {
     type: string
-    description: "All tag key:value pairs (for debug only)."
     sql: (
       SELECT GROUP_CONCAT(
         DISTINCT CONCAT(ot.name, ':', COALESCE(oct.value, ''))
@@ -298,6 +296,7 @@ view: content_integration_optimizer {
         AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
     ) ;;
     group_label: "TAGS"
+    description: "All tag key:value pairs (for debug only)."
   }
 
   ## IS single to multy add a dimension
@@ -340,7 +339,7 @@ view: content_integration_optimizer {
     sql: ${unique_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
     value_format: "0.00%"
     label: "Unique Content Proportion"
-    description: "Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
+    description: "NOTE! Very heavy! Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
     group_label: "Rates"
   }
 
@@ -348,7 +347,7 @@ view: content_integration_optimizer {
     type: count_distinct
     sql: CASE WHEN ${is_unique_contestant} = TRUE THEN ${contestant_id} END ;;
     label: "Unique Contestants Count"
-    description: "Count of distinct contestants with unique content sources"
+    description: "NOTE! Very heavy! Count of distinct contestants with unique content sources"
     group_label: "Counts"
     hidden: yes
   }
