@@ -200,6 +200,7 @@ view: content_integration_optimizer {
         AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
     ) ;;
     group_label: "2. CONTESTANT INFO"
+    hidden: yes
     description: "Distinct Demoted tag values for this candidate, comma-separated."
   }
 
@@ -214,23 +215,36 @@ view: content_integration_optimizer {
         AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
     ) ;;
     group_label: "2. CONTESTANT INFO"
+    hidden: yes
     description: "Distinct Promoted tag values for this candidate, comma-separated."
   }
 
-  dimension: has_demoted {
+  dimension: is_demoted {
     type: yesno
-    sql: CASE WHEN ${demoted_values} IS NOT NULL AND ${demoted_values} <> '' THEN TRUE ELSE FALSE END ;;
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Demoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the candidate has at least one Demoted tag in range."
-    hidden: yes
+    description: "True when the candidate has a Demoted tag in range."
   }
 
-  dimension: has_promoted {
+  dimension: is_promoted {
     type: yesno
-    sql: CASE WHEN ${promoted_values} IS NOT NULL AND ${promoted_values} <> '' THEN TRUE ELSE FALSE END ;;
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Promoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "True when the candidate has at least one Promoted tag in range."
-    hidden: yes
+    description: "True when the candidate has a Promoted tag in range."
   }
 
   dimension: is_mixed_fare_type {
