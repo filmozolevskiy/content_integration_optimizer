@@ -189,6 +189,50 @@ view: content_integration_optimizer {
     group_label: "2. CONTESTANT INFO"
   }
 
+  dimension: demoted_values {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Demoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Distinct Demoted tag values for this candidate, comma-separated."
+  }
+
+  dimension: promoted_values {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Promoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Distinct Promoted tag values for this candidate, comma-separated."
+  }
+
+  dimension: has_demoted {
+    type: yesno
+    sql: CASE WHEN ${demoted_values} IS NOT NULL AND ${demoted_values} <> '' THEN TRUE ELSE FALSE END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True when the candidate has at least one Demoted tag in range."
+    hidden: yes
+  }
+
+  dimension: has_promoted {
+    type: yesno
+    sql: CASE WHEN ${promoted_values} IS NOT NULL AND ${promoted_values} <> '' THEN TRUE ELSE FALSE END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True when the candidate has at least one Promoted tag in range."
+    hidden: yes
+  }
+
   dimension: is_mixed_fare_type {
     type: yesno
     sql: CASE WHEN EXISTS (
