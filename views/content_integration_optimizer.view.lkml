@@ -1,13 +1,17 @@
 view: content_integration_optimizer {
   sql_table_name: ota.optimizer_candidates ;;
 
+  # -------------------------
+  # Parameters
+  # -------------------------
+
   parameter: start_date {
     type: date
     default_value: "2025-01-01"
   }
 
   # -------------------------
-  # Dimension groups / keys
+  # Keys (hidden)
   # -------------------------
 
   dimension: id {
@@ -17,11 +21,9 @@ view: content_integration_optimizer {
     hidden: yes
   }
 
-  dimension: contestant_id {
-    type: number
-    sql: ${TABLE}.id ;;
-    group_label: "2. CONTESTANT INFO"
-  }
+  # -------------------------
+  # 1. DATE
+  # -------------------------
 
   dimension_group: date {
     type: time
@@ -31,8 +33,14 @@ view: content_integration_optimizer {
   }
 
   # -------------------------
-  # Dimensions
+  # 2. CONTESTANT INFO
   # -------------------------
+
+  dimension: contestant_id {
+    type: number
+    sql: ${TABLE}.id ;;
+    group_label: "2. CONTESTANT INFO"
+  }
 
   dimension: parent_id            { type: number sql: ${TABLE}.parent_id ;; group_label: "2. CONTESTANT INFO" }
   dimension: attempt_id           { type: number sql: ${TABLE}.attempt_id ;; group_label: "2. CONTESTANT INFO" }
@@ -75,29 +83,6 @@ view: content_integration_optimizer {
   dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "2. CONTESTANT INFO"}
   dimension: trip_type            { type: string sql: ${optimizer_attempts.trip_type} ;; group_label: "2. CONTESTANT INFO"}
 
-  dimension: candidacy {
-    type: string
-    sql: ${TABLE}.candidacy ;;
-    description: "Candidate eligibility status"
-    group_label: "3. BUCKETS"
-    suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
-  }
-
-  dimension: candidate_currency   { type: string sql: ${TABLE}.currency ;; group_label: "MONETARY"}
-  dimension: base                 { type: number value_format: "#,##0.00" sql: ${TABLE}.base ;; group_label: "MONETARY" }
-  dimension: tax                  { type: number value_format: "#,##0.00" sql: ${TABLE}.tax ;; group_label: "MONETARY" }
-  dimension: markup               { type: number value_format: "#,##0.00" sql: ${TABLE}.markup ;; group_label: "MONETARY" }
-  dimension: total                { type: number value_format: "#,##0.00" sql: ${TABLE}.total ;; group_label: "MONETARY" }
-
-  dimension: merchant_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.merchant_fee ;; group_label: "MONETARY" }
-  dimension: supplier_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.supplier_fee ;; group_label: "MONETARY" }
-
-  dimension: commission           { type: number value_format: "#,##0.00" sql: ${TABLE}.commission ;; group_label: "MONETARY" }
-  dimension: dropnet_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.dropnet_revenue ;; group_label: "MONETARY" }
-  dimension: segment_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.segment_revenue ;; group_label: "MONETARY" }
-
-  dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; group_label: "MONETARY" }
-
   dimension: is_multicurrency {
     type: yesno
     sql: CASE
@@ -112,17 +97,7 @@ view: content_integration_optimizer {
     description: "Check if candidate currency differs from attempt currency."
   }
 
-  dimension: is_original {
-    type: yesno
-    sql: CASE
-          WHEN ${TABLE}.reprice_type = 'original' THEN TRUE
-          ELSE FALSE
-        END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "Check if candidate came from search."
-  }
-
-  dimension: multiticket_part {
+    dimension: multiticket_part {
     type: string
     sql: (
       SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
@@ -135,144 +110,20 @@ view: content_integration_optimizer {
     group_label: "2. CONTESTANT INFO"
   }
 
+  dimension: is_original {
+    type: yesno
+    sql: CASE
+          WHEN ${TABLE}.reprice_type = 'original' THEN TRUE
+          ELSE FALSE
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "Check if candidate came from search."
+  }
+
   dimension: reprice_index {
     type: string
     sql: ${TABLE}.reprice_index ;;
     group_label: "2. CONTESTANT INFO"
-  }
-
-  dimension: exception_values {
-    type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Exception'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
-    group_label: "2. CONTESTANT INFO"
-  }
-
-  dimension: has_exception {
-    type: yesno
-    sql: CASE WHEN ${exception_values} IS NOT NULL AND ${exception_values} <> '' THEN TRUE ELSE FALSE END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "Only ineligible candidates have an exception."
-    hidden: yes
-  }
-
-  dimension: is_alternative_marketing_carrier {
-    type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'AlternativeMarketingCarrier'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "Check if candidate has AlternativeMarketingCarrier tag"
-  }
-
-  dimension: downgrade_values {
-    type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Downgrade'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
-    group_label: "2. CONTESTANT INFO"
-  }
-
-  dimension: demoted_values {
-    type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Demoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
-    group_label: "2. CONTESTANT INFO"
-    hidden: yes
-    description: "Distinct Demoted tag values for this candidate, comma-separated."
-  }
-
-  dimension: promoted_values {
-    type: string
-    sql: (
-      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Promoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) ;;
-    group_label: "2. CONTESTANT INFO"
-    hidden: yes
-    description: "Distinct Promoted tag values for this candidate, comma-separated."
-  }
-
-  dimension: is_demoted {
-    type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Demoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "True when the candidate has a Demoted tag in range."
-  }
-
-  dimension: is_promoted {
-    type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Promoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "True when the candidate has a Promoted tag in range."
-  }
-
-  dimension: is_mixed_fare_type {
-    type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'MixedFareType'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "Check if candidate has MixedFareType tag"
-  }
-
-  dimension: is_risky {
-    type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Risky'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-    ) THEN TRUE ELSE FALSE END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "Check if candidate has Risky tag"
   }
 
   dimension: is_unique_contestant {
@@ -340,6 +191,168 @@ view: content_integration_optimizer {
     description: "NOTE! Very heavy! True if the booked contestant is not the original one (optimized)"
   }
 
+  # -------------------------
+  # 3. BUCKETS
+  # -------------------------
+
+  dimension: candidacy {
+    type: string
+    sql: ${TABLE}.candidacy ;;
+    description: "Candidate eligibility status"
+    group_label: "3. BUCKETS"
+    suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
+  }
+
+  # -------------------------
+  # MONETARY
+  # -------------------------
+
+  dimension: candidate_currency   { type: string sql: ${TABLE}.currency ;; group_label: "MONETARY"}
+  dimension: base                 { type: number value_format: "#,##0.00" sql: ${TABLE}.base ;; group_label: "MONETARY" }
+  dimension: tax                  { type: number value_format: "#,##0.00" sql: ${TABLE}.tax ;; group_label: "MONETARY" }
+  dimension: markup               { type: number value_format: "#,##0.00" sql: ${TABLE}.markup ;; group_label: "MONETARY" }
+  dimension: total                { type: number value_format: "#,##0.00" sql: ${TABLE}.total ;; group_label: "MONETARY" }
+
+  dimension: merchant_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.merchant_fee ;; group_label: "MONETARY" }
+  dimension: supplier_fee         { type: number value_format: "#,##0.00" sql: ${TABLE}.supplier_fee ;; group_label: "MONETARY" }
+
+  dimension: commission           { type: number value_format: "#,##0.00" sql: ${TABLE}.commission ;; group_label: "MONETARY" }
+  dimension: dropnet_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.dropnet_revenue ;; group_label: "MONETARY" }
+  dimension: segment_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.segment_revenue ;; group_label: "MONETARY" }
+
+  dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; group_label: "MONETARY" }
+
+  # -------------------------
+  # 4. TAGS
+  # -------------------------
+
+  dimension: exception {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Exception'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) ;;
+    group_label: "4. TAGS"
+    description: "Reason for being ineligible"
+  }
+
+  dimension: is_alternative_marketing_carrier {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'AlternativeMarketingCarrier'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "Check if candidate has AlternativeMarketingCarrier tag"
+  }
+
+  dimension: is_downgrade {
+    type: yesno
+    sql: COALESCE((
+      SELECT MAX(CASE WHEN ot.name = 'Downgrade' THEN 1 ELSE 0 END)
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ), 0) = 1 ;;
+    group_label: "4. TAGS"
+    description: "True when the candidate has at least one Downgrade tag in the start_date window."
+  }
+
+  dimension: demoted_values {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Demoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) ;;
+    group_label: "4. TAGS"
+    hidden: yes
+    description: "Distinct Demoted tag values for this candidate, comma-separated."
+  }
+
+  dimension: promoted_values {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Promoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) ;;
+    group_label: "4. TAGS"
+    hidden: yes
+    description: "Distinct Promoted tag values for this candidate, comma-separated."
+  }
+
+  dimension: is_demoted {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Demoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "True when the candidate has a Demoted tag in range."
+  }
+
+  dimension: is_promoted {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Promoted'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "True when the candidate has a Promoted tag in range."
+  }
+
+  dimension: is_mixed_fare_type {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'MixedFareType'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "Check if candidate has MixedFareType tag"
+  }
+
+  dimension: is_risky {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Risky'
+        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "Check if candidate has Risky tag"
+  }
+
   dimension: tag_pairs {
     type: string
     sql: (
@@ -353,11 +366,14 @@ view: content_integration_optimizer {
       WHERE oct.candidate_id = ${TABLE}.id
         AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
     ) ;;
-    group_label: "TAGS"
-    description: "All tag key:value pairs (for debug only)."
+    group_label: "4. TAGS"
+    label: "Tag pairs (debug)"
+    description: "Field for debugging and comparing raw concatenated output in the UI."
   }
 
-  ## IS single to multy add a dimension
+  # -------------------------
+  # Measures - Counts
+  # -------------------------
 
   measure: all_contestants_count {
     type: count_distinct
@@ -383,22 +399,44 @@ view: content_integration_optimizer {
     group_label: "Counts"
   }
 
-  measure: eligibility_rate {
-    type: number
-    sql: ${eligible_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
-    value_format: "0.00%"
-    label: "Eligibility Rate"
-    description: "Percentage of eligible contestants out of all contestants"
-    group_label: "Rates"
+  measure: demoted_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_demoted} = TRUE THEN ${contestant_id} END ;;
+    label: "Demoted Contestants Count"
+    description: "Count of distinct contestants with a Demoted tag in the start_date window"
+    group_label: "Counts"
   }
 
-  measure: unique_content_proportion {
-    type: number
-    sql: ${unique_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
-    value_format: "0.00%"
-    label: "Unique Content Proportion"
-    description: "NOTE! Very heavy! Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
-    group_label: "Rates"
+  measure: promoted_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_promoted} = TRUE THEN ${contestant_id} END ;;
+    label: "Promoted Contestants Count"
+    description: "Count of distinct contestants with a Promoted tag in the start_date window"
+    group_label: "Counts"
+  }
+
+  measure: alternative_marketing_carrier_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_alternative_marketing_carrier} = TRUE THEN ${contestant_id} END ;;
+    label: "Alternative Marketing Carrier Contestants Count"
+    description: "Count of distinct contestants with an AlternativeMarketingCarrier tag in the start_date window"
+    group_label: "Counts"
+  }
+
+  measure: mixed_fare_type_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_mixed_fare_type} = TRUE THEN ${contestant_id} END ;;
+    label: "Mixed Fare Type Contestants Count"
+    description: "Count of distinct contestants with a MixedFareType tag in the start_date window"
+    group_label: "Counts"
+  }
+
+  measure: risky_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_risky} = TRUE THEN ${contestant_id} END ;;
+    label: "Risky Contestants Count"
+    description: "Count of distinct contestants with a Risky tag in the start_date window"
+    group_label: "Counts"
   }
 
   measure: unique_contestants_count {
@@ -410,6 +448,71 @@ view: content_integration_optimizer {
     hidden: yes
   }
 
-  ## add some measures
+  # -------------------------
+  # Measures - Rates
+  # -------------------------
+
+  measure: eligibility_rate {
+    type: number
+    sql: ${eligible_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Eligibility Rate"
+    description: "Percentage of eligible contestants out of all contestants"
+    group_label: "Rates"
+  }
+
+  measure: demoted_rate {
+    type: number
+    sql: ${demoted_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Demoted Rate"
+    description: "Share of all contestants that have a Demoted tag in the start_date window"
+    group_label: "Rates"
+  }
+
+  measure: promoted_rate {
+    type: number
+    sql: ${promoted_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Promoted Rate"
+    description: "Share of all contestants that have a Promoted tag in the start_date window"
+    group_label: "Rates"
+  }
+
+  measure: alternative_marketing_carrier_proportion {
+    type: number
+    sql: ${alternative_marketing_carrier_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Alternative Marketing Carrier Proportion"
+    description: "Proportion of all contestants that have an AlternativeMarketingCarrier tag in the start_date window"
+    group_label: "Rates"
+  }
+
+  measure: mixed_fare_type_proportion {
+    type: number
+    sql: ${mixed_fare_type_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Mixed Fare Type Proportion"
+    description: "Proportion of all contestants that have a MixedFareType tag in the start_date window"
+    group_label: "Rates"
+  }
+
+  measure: risky_proportion {
+    type: number
+    sql: ${risky_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Risky Proportion"
+    description: "Proportion of all contestants that have a Risky tag in the start_date window"
+    group_label: "Rates"
+  }
+
+  measure: unique_content_proportion {
+    type: number
+    sql: ${unique_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Unique Content Proportion"
+    description: "NOTE! Very heavy! Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
+    group_label: "Rates"
+  }
 
 }
