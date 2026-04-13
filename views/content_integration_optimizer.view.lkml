@@ -11,6 +11,65 @@ view: content_integration_optimizer {
   }
 
   # -------------------------
+  # Hidden helpers (shared SQL fragments; reference with ${...})
+  # -------------------------
+
+  dimension: start_date_bound {
+    hidden: yes
+    sql: TIMESTAMP({% parameter content_integration_optimizer.start_date %}) ;;
+  }
+
+  dimension: original_contestant_id {
+    hidden: yes
+    type: number
+    sql: (
+      SELECT oc_orig.id
+      FROM ota.optimizer_candidates oc_orig
+      WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+        AND oc_orig.reprice_type = 'original'
+        AND oc_orig.created_at > ${start_date_bound}
+      LIMIT 1
+    ) ;;
+  }
+
+  dimension: original_contestant_revenue {
+    hidden: yes
+    type: number
+    sql: (
+      SELECT oc_orig.revenue
+      FROM ota.optimizer_candidates oc_orig
+      WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+        AND oc_orig.reprice_type = 'original'
+        AND oc_orig.created_at > ${start_date_bound}
+      LIMIT 1
+    ) ;;
+  }
+
+  dimension: next_eligible_non_promoted_revenue {
+    hidden: yes
+    type: number
+    sql: (
+      SELECT oc2.revenue
+      FROM ota.optimizer_candidates oc2
+      WHERE oc2.attempt_id = ${TABLE}.attempt_id
+        AND oc2.created_at > ${start_date_bound}
+        AND oc2.id <> ${TABLE}.id
+        AND oc2.candidacy = 'Eligible'
+        AND oc2.`rank` > ${TABLE}.rank
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ota.optimizer_candidate_tags oct
+          INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+          WHERE oct.candidate_id = oc2.id
+            AND ot.name = 'Promoted'
+            AND oct.created_at > ${start_date_bound}
+        )
+      ORDER BY oc2.`rank` ASC, oc2.id ASC
+      LIMIT 1
+    ) ;;
+  }
+
+  # -------------------------
   # Keys (hidden)
   # -------------------------
 
@@ -57,8 +116,8 @@ view: content_integration_optimizer {
   dimension: debug_link {
     type: string
     sql: CASE
-      WHEN ${optimizer_attempt_bookings.booking_id} IS NOT NULL
-      THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${optimizer_attempt_bookings.booking_id} AS CHAR))
+      WHEN ${booking_id} IS NOT NULL
+      THEN CONCAT('https://reservations.voyagesalacarte.ca/booking/index/', CAST(${booking_id} AS CHAR))
       ELSE CONCAT('https://reservations.voyagesalacarte.ca/debug-logs/log-group/', CAST(${optimizer_attempts.search_id} AS CHAR))
     END ;;
     link: {
@@ -97,7 +156,7 @@ view: content_integration_optimizer {
     description: "Check if candidate currency differs from attempt currency."
   }
 
-    dimension: multiticket_part {
+  dimension: multiticket_part {
     type: string
     sql: (
       SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
@@ -105,7 +164,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'MultiTicketPart'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "2. CONTESTANT INFO"
   }
@@ -140,13 +199,13 @@ view: content_integration_optimizer {
             FROM ota.optimizer_candidates oc2
             WHERE oc2.attempt_id = ${attempt_id}
               AND oc2.candidacy = 'Eligible'
-              AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
+              AND oc2.created_at > ${start_date_bound}
           ) = 1
           AND (
             SELECT COUNT(*)
             FROM ota.optimizer_candidates oc3
             WHERE oc3.attempt_id = ${attempt_id}
-              AND oc3.created_at > {% parameter content_integration_optimizer.start_date %}
+              AND oc3.created_at > ${start_date_bound}
               AND oc3.candidacy <> 'Eligible'
           ) >= 1
           THEN TRUE
@@ -163,7 +222,7 @@ view: content_integration_optimizer {
             SELECT COUNT(*)
             FROM ota.optimizer_candidates oc2
             WHERE oc2.attempt_id = ${attempt_id}
-              AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
+              AND oc2.created_at > ${start_date_bound}
           ) = 1
           THEN TRUE
           ELSE FALSE
@@ -175,15 +234,8 @@ view: content_integration_optimizer {
   dimension: is_optimized {
     type: yesno
     sql: CASE
-          WHEN ${optimizer_attempt_bookings.booking_id} IS NOT NULL
-            AND ${contestant_id} <> (
-              SELECT oc_orig.id
-              FROM ota.optimizer_candidates oc_orig
-              WHERE oc_orig.attempt_id = ${attempt_id}
-                AND oc_orig.reprice_type = 'original'
-                AND oc_orig.created_at > {% parameter content_integration_optimizer.start_date %}
-              LIMIT 1
-            )
+          WHEN ${booking_id} IS NOT NULL
+            AND ${contestant_id} <> ${original_contestant_id}
           THEN TRUE
           ELSE FALSE
         END ;;
@@ -226,87 +278,25 @@ view: content_integration_optimizer {
     type: number
     value_format: "#,##0.00"
     sql: CASE
-      WHEN ${optimizer_attempt_bookings.booking_id} IS NOT NULL
-        AND EXISTS (
-          SELECT 1
-          FROM ota.optimizer_candidate_tags oct
-          INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-          WHERE oct.candidate_id = ${TABLE}.id
-            AND ot.name = 'Promoted'
-            AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-        )
+      WHEN ${booking_id} IS NOT NULL
+        AND ${is_promoted}
       THEN
         CASE
-          WHEN (
-            SELECT oc_orig.revenue
-            FROM ota.optimizer_candidates oc_orig
-            WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
-              AND oc_orig.reprice_type = 'original'
-              AND oc_orig.created_at > {% parameter content_integration_optimizer.start_date %}
-            LIMIT 1
-          ) > COALESCE(${TABLE}.revenue, 0)
+          WHEN ${original_contestant_revenue} > COALESCE(${TABLE}.revenue, 0)
           THEN NULL
           ELSE
             CASE
-              WHEN (
-                SELECT oc2.revenue
-                FROM ota.optimizer_candidates oc2
-                WHERE oc2.attempt_id = ${TABLE}.attempt_id
-                  AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
-                  AND oc2.`rank` > ${TABLE}.rank
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM ota.optimizer_candidate_tags oct
-                    INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-                    WHERE oct.candidate_id = oc2.id
-                      AND ot.name = 'Promoted'
-                      AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-                  )
-                ORDER BY oc2.`rank` ASC, oc2.id ASC
-                LIMIT 1
-              ) IS NULL
+              WHEN ${next_eligible_non_promoted_revenue} IS NULL
               THEN NULL
-              WHEN ${TABLE}.revenue <= (
-                SELECT oc2.revenue
-                FROM ota.optimizer_candidates oc2
-                WHERE oc2.attempt_id = ${TABLE}.attempt_id
-                  AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
-                  AND oc2.`rank` > ${TABLE}.rank
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM ota.optimizer_candidate_tags oct
-                    INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-                    WHERE oct.candidate_id = oc2.id
-                      AND ot.name = 'Promoted'
-                      AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-                  )
-                ORDER BY oc2.`rank` ASC, oc2.id ASC
-                LIMIT 1
-              )
+              WHEN (${TABLE}.revenue - ${next_eligible_non_promoted_revenue}) <= 0
               THEN NULL
-              ELSE ${TABLE}.revenue - (
-                SELECT oc2.revenue
-                FROM ota.optimizer_candidates oc2
-                WHERE oc2.attempt_id = ${TABLE}.attempt_id
-                  AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
-                  AND oc2.`rank` > ${TABLE}.rank
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM ota.optimizer_candidate_tags oct
-                    INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-                    WHERE oct.candidate_id = oc2.id
-                      AND ot.name = 'Promoted'
-                      AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-                  )
-                ORDER BY oc2.`rank` ASC, oc2.id ASC
-                LIMIT 1
-              )
+              ELSE ABS(${TABLE}.revenue - ${next_eligible_non_promoted_revenue})
             END
         END
       ELSE NULL
     END ;;
     group_label: "MONETARY"
-    description: "Booked + Promoted only: uplift vs the next non-promoted contestant on the same attempt (by rank). NULL when the original contestant has higher revenue than this booking (forced switch off original), when uplift vs next is zero or negative, when there is no next non-promoted row, or when not booked/not promoted."
+    description: "Booked + Promoted only: absolute uplift vs the next Eligible, non-promoted contestant on the same attempt with rank greater than this row (skips failed or non-eligible rows between). Uplift is the algebraic difference between this row's revenue and that competitor; when both are negative, a positive uplift means the promoted booking loses less (better margin) than the next alternative. NULL when the original contestant has higher revenue than this booking (forced switch off original), when uplift vs next is zero or negative, when no such next competitor exists, or when not booked/not promoted."
   }
 
   # -------------------------
@@ -321,7 +311,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'Exception'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "4. TAGS"
     description: "Reason for being ineligible"
@@ -335,7 +325,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'AlternativeMarketingCarrier'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
     description: "Check if candidate has AlternativeMarketingCarrier tag"
@@ -348,7 +338,7 @@ view: content_integration_optimizer {
       FROM ota.optimizer_candidate_tags oct
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ), 0) = 1 ;;
     group_label: "4. TAGS"
     description: "True when the candidate has at least one Downgrade tag in the start_date window."
@@ -362,7 +352,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'Demoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "4. TAGS"
     hidden: yes
@@ -377,7 +367,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'Promoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "4. TAGS"
     hidden: yes
@@ -392,7 +382,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'Demoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
     description: "True when the candidate has a Demoted tag in range."
@@ -406,7 +396,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'Promoted'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
     description: "True when the candidate has a Promoted tag in range."
@@ -416,20 +406,13 @@ view: content_integration_optimizer {
     type: yesno
     label: "Saved by promoted"
     sql: CASE
-      WHEN ${optimizer_attempt_bookings.booking_id} IS NOT NULL
-        AND EXISTS (
-          SELECT 1
-          FROM ota.optimizer_candidate_tags oct
-          INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-          WHERE oct.candidate_id = ${TABLE}.id
-            AND ot.name = 'Promoted'
-            AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-        )
+      WHEN ${booking_id} IS NOT NULL
+        AND ${is_promoted}
         AND NOT EXISTS (
           SELECT 1
           FROM ota.optimizer_candidates oc
-          WHERE oc.attempt_id = ${TABLE}.attempt_id
-            AND oc.created_at > {% parameter content_integration_optimizer.start_date %}
+          WHERE oc.attempt_id = ${attempt_id}
+            AND oc.created_at > ${start_date_bound}
             AND oc.id <> ${TABLE}.id
             AND oc.candidacy = 'Eligible'
             AND COALESCE(oc.reprice_type, '') <> 'original'
@@ -439,7 +422,7 @@ view: content_integration_optimizer {
               INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
               WHERE oct.candidate_id = oc.id
                 AND ot.name = 'Promoted'
-                AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+                AND oct.created_at > ${start_date_bound}
             )
         )
       THEN TRUE
@@ -465,7 +448,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'MixedFareType'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
     description: "Check if candidate has MixedFareType tag"
@@ -479,7 +462,7 @@ view: content_integration_optimizer {
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
         AND ot.name = 'Risky'
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
     description: "Check if candidate has Risky tag"
@@ -496,7 +479,7 @@ view: content_integration_optimizer {
       FROM ota.optimizer_candidate_tags oct
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
-        AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "4. TAGS"
     label: "Tag pairs (debug)"
@@ -681,7 +664,7 @@ view: content_integration_optimizer {
     sql: ${promoted_booking_extra_revenue} ;;
     value_format: "#,##0.00"
     label: "Promoted Booking Extra Revenue (Sum)"
-    description: "Sum of promoted_booking_extra_revenue. Excludes rows where original revenue exceeds the booked promoted revenue, and non-positive uplift vs the next non-promoted contestant."
+    description: "Sum of promoted_booking_extra_revenue. Excludes rows where original revenue exceeds the booked promoted revenue, and non-positive uplift vs the next Eligible non-promoted contestant (by rank). Includes positive algebraic uplift when both revenues are negative, reported as absolute magnitude."
     group_label: "MONETARY"
   }
 
