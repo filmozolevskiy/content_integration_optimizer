@@ -222,6 +222,42 @@ view: content_integration_optimizer {
 
   dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; group_label: "MONETARY" }
 
+  dimension: promoted_booking_extra_revenue {
+    type: number
+    value_format: "#,##0.00"
+    sql: CASE
+      WHEN ${optimizer_attempt_bookings.booking_id} IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM ota.optimizer_candidate_tags oct
+          INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+          WHERE oct.candidate_id = ${TABLE}.id
+            AND ot.name = 'Promoted'
+            AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        )
+      THEN ${TABLE}.revenue - (
+        SELECT oc2.revenue
+        FROM ota.optimizer_candidates oc2
+        WHERE oc2.attempt_id = ${TABLE}.attempt_id
+          AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
+          AND oc2.`rank` > ${TABLE}.rank
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ota.optimizer_candidate_tags oct
+            INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+            WHERE oct.candidate_id = oc2.id
+              AND ot.name = 'Promoted'
+              AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+          )
+        ORDER BY oc2.`rank` ASC, oc2.id ASC
+        LIMIT 1
+      )
+      ELSE NULL
+    END ;;
+    group_label: "MONETARY"
+    description: "When this row is the booked candidate and has the Promoted tag: candidate revenue minus revenue of the next contestant on the same attempt with no Promoted tag, ordered by rank (smaller rank first; next = larger rank). NULL if not booked, not promoted, or no such next candidate."
+  }
+
   # -------------------------
   # 4. TAGS
   # -------------------------
@@ -513,6 +549,19 @@ view: content_integration_optimizer {
     label: "Unique Content Proportion"
     description: "NOTE! Very heavy! Proportion of contestants that have unique content sources (only one distinct GDS for non-Amadeus, or one distinct gds_account_id for Amadeus) among eligible contestants"
     group_label: "Rates"
+  }
+
+  # -------------------------
+  # Measures - Revenue
+  # -------------------------
+
+  measure: promoted_booking_extra_revenue_sum {
+    type: sum
+    sql: ${promoted_booking_extra_revenue} ;;
+    value_format: "#,##0.00"
+    label: "Promoted Booking Extra Revenue (Sum)"
+    description: "Sum of promoted_booking_extra_revenue: incremental revenue when a promoted candidate is booked vs the next non-promoted contestant on the same attempt (by rank)."
+    group_label: "MONETARY"
   }
 
 }
