@@ -486,6 +486,14 @@ view: content_integration_optimizer {
     group_label: "Counts"
   }
 
+  measure: ineligible_contestants_count {
+    type: count_distinct
+    sql: CASE WHEN ${candidacy} != 'Eligible' THEN ${contestant_id} END ;;
+    label: "Ineligible Contestants Count"
+    description: "Count of distinct contestants with candidacy = 'Ineligible'"
+    group_label: "Counts"
+  }
+
   measure: demoted_contestants_count {
     type: count_distinct
     sql: CASE WHEN ${is_demoted} = TRUE THEN ${contestant_id} END ;;
@@ -545,6 +553,15 @@ view: content_integration_optimizer {
     value_format: "0.00%"
     label: "Eligibility Rate"
     description: "Percentage of eligible contestants out of all contestants"
+    group_label: "Rates"
+  }
+
+  measure: ineligibility_rate {
+    type: number
+    sql: ${ineligible_contestants_count} / NULLIF(${all_contestants_count}, 0) ;;
+    value_format: "0.00%"
+    label: "Ineligibility Rate"
+    description: "Percentage of ineligibility contestants out of all contestants"
     group_label: "Rates"
   }
 
