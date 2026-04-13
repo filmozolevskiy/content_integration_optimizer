@@ -235,27 +235,78 @@ view: content_integration_optimizer {
             AND ot.name = 'Promoted'
             AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
         )
-      THEN ${TABLE}.revenue - (
-        SELECT oc2.revenue
-        FROM ota.optimizer_candidates oc2
-        WHERE oc2.attempt_id = ${TABLE}.attempt_id
-          AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
-          AND oc2.`rank` > ${TABLE}.rank
-          AND NOT EXISTS (
-            SELECT 1
-            FROM ota.optimizer_candidate_tags oct
-            INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-            WHERE oct.candidate_id = oc2.id
-              AND ot.name = 'Promoted'
-              AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
-          )
-        ORDER BY oc2.`rank` ASC, oc2.id ASC
-        LIMIT 1
-      )
+      THEN
+        CASE
+          WHEN (
+            SELECT oc_orig.revenue
+            FROM ota.optimizer_candidates oc_orig
+            WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+              AND oc_orig.reprice_type = 'original'
+              AND oc_orig.created_at > {% parameter content_integration_optimizer.start_date %}
+            LIMIT 1
+          ) > COALESCE(${TABLE}.revenue, 0)
+          THEN NULL
+          ELSE
+            CASE
+              WHEN (
+                SELECT oc2.revenue
+                FROM ota.optimizer_candidates oc2
+                WHERE oc2.attempt_id = ${TABLE}.attempt_id
+                  AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
+                  AND oc2.`rank` > ${TABLE}.rank
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM ota.optimizer_candidate_tags oct
+                    INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+                    WHERE oct.candidate_id = oc2.id
+                      AND ot.name = 'Promoted'
+                      AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+                  )
+                ORDER BY oc2.`rank` ASC, oc2.id ASC
+                LIMIT 1
+              ) IS NULL
+              THEN NULL
+              WHEN ${TABLE}.revenue <= (
+                SELECT oc2.revenue
+                FROM ota.optimizer_candidates oc2
+                WHERE oc2.attempt_id = ${TABLE}.attempt_id
+                  AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
+                  AND oc2.`rank` > ${TABLE}.rank
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM ota.optimizer_candidate_tags oct
+                    INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+                    WHERE oct.candidate_id = oc2.id
+                      AND ot.name = 'Promoted'
+                      AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+                  )
+                ORDER BY oc2.`rank` ASC, oc2.id ASC
+                LIMIT 1
+              )
+              THEN NULL
+              ELSE ${TABLE}.revenue - (
+                SELECT oc2.revenue
+                FROM ota.optimizer_candidates oc2
+                WHERE oc2.attempt_id = ${TABLE}.attempt_id
+                  AND oc2.created_at > {% parameter content_integration_optimizer.start_date %}
+                  AND oc2.`rank` > ${TABLE}.rank
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM ota.optimizer_candidate_tags oct
+                    INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+                    WHERE oct.candidate_id = oc2.id
+                      AND ot.name = 'Promoted'
+                      AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+                  )
+                ORDER BY oc2.`rank` ASC, oc2.id ASC
+                LIMIT 1
+              )
+            END
+        END
       ELSE NULL
     END ;;
     group_label: "MONETARY"
-    description: "When this row is the booked candidate and has the Promoted tag: candidate revenue minus revenue of the next contestant on the same attempt with no Promoted tag, ordered by rank (smaller rank first; next = larger rank). NULL if not booked, not promoted, or no such next candidate."
+    description: "Booked + Promoted only: uplift vs the next non-promoted contestant on the same attempt (by rank). NULL when the original contestant has higher revenue than this booking (forced switch off original), when uplift vs next is zero or negative, when there is no next non-promoted row, or when not booked/not promoted."
   }
 
   # -------------------------
@@ -560,7 +611,7 @@ view: content_integration_optimizer {
     sql: ${promoted_booking_extra_revenue} ;;
     value_format: "#,##0.00"
     label: "Promoted Booking Extra Revenue (Sum)"
-    description: "Sum of promoted_booking_extra_revenue: incremental revenue when a promoted candidate is booked vs the next non-promoted contestant on the same attempt (by rank)."
+    description: "Sum of promoted_booking_extra_revenue. Excludes rows where original revenue exceeds the booked promoted revenue, and non-positive uplift vs the next non-promoted contestant."
     group_label: "MONETARY"
   }
 
