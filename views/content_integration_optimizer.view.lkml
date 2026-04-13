@@ -412,6 +412,51 @@ view: content_integration_optimizer {
     description: "True when the candidate has a Promoted tag in range."
   }
 
+  dimension: is_saved_by_promoted {
+    type: yesno
+    label: "Saved by promoted"
+    sql: CASE
+      WHEN ${optimizer_attempt_bookings.booking_id} IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM ota.optimizer_candidate_tags oct
+          INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+          WHERE oct.candidate_id = ${TABLE}.id
+            AND ot.name = 'Promoted'
+            AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ota.optimizer_candidates oc
+          WHERE oc.attempt_id = ${TABLE}.attempt_id
+            AND oc.created_at > {% parameter content_integration_optimizer.start_date %}
+            AND oc.id <> ${TABLE}.id
+            AND oc.candidacy = 'Eligible'
+            AND COALESCE(oc.reprice_type, '') <> 'original'
+            AND NOT EXISTS (
+              SELECT 1
+              FROM ota.optimizer_candidate_tags oct
+              INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+              WHERE oct.candidate_id = oc.id
+                AND ot.name = 'Promoted'
+                AND oct.created_at > {% parameter content_integration_optimizer.start_date %}
+            )
+        )
+      THEN TRUE
+      ELSE FALSE
+    END ;;
+    group_label: "4. TAGS"
+    description: "Yes when this row is the booked candidate with a Promoted tag, and there is no other Eligible contestant on the same attempt who is neither the original (reprice_type) nor Promoted. Use for bookings that only succeed because a promoted option existed alongside original or other non-competing paths."
+  }
+
+  dimension: saved_by_promoted_revenue {
+    type: number
+    value_format: "#,##0.00"
+    sql: CASE WHEN ${is_saved_by_promoted} THEN ${TABLE}.revenue ELSE NULL END ;;
+    group_label: "MONETARY"
+    description: "Candidate revenue when this row is a booking classified as saved by promoted (is_saved_by_promoted); NULL otherwise."
+  }
+
   dimension: is_mixed_fare_type {
     type: yesno
     sql: CASE WHEN EXISTS (
@@ -499,6 +544,14 @@ view: content_integration_optimizer {
     sql: CASE WHEN ${is_promoted} = TRUE THEN ${contestant_id} END ;;
     label: "Promoted Contestants Count"
     description: "Count of distinct contestants with a Promoted tag in the start_date window"
+    group_label: "Counts"
+  }
+
+  measure: saved_by_promoted_bookings_count {
+    type: count_distinct
+    sql: CASE WHEN ${is_saved_by_promoted} = TRUE THEN ${booking_id} END ;;
+    label: "Saved by Promoted Bookings Count"
+    description: "Distinct bookings where the booked contestant is Promoted and no other Eligible non-original non-promoted contestant exists on the attempt (see is_saved_by_promoted)."
     group_label: "Counts"
   }
 
@@ -612,6 +665,15 @@ view: content_integration_optimizer {
     value_format: "#,##0.00"
     label: "Promoted Booking Extra Revenue (Sum)"
     description: "Sum of promoted_booking_extra_revenue. Excludes rows where original revenue exceeds the booked promoted revenue, and non-positive uplift vs the next non-promoted contestant."
+    group_label: "MONETARY"
+  }
+
+  measure: saved_by_promoted_revenue_sum {
+    type: sum
+    sql: ${saved_by_promoted_revenue} ;;
+    value_format: "#,##0.00"
+    label: "Saved by Promoted Revenue (Sum)"
+    description: "Sum of revenue for bookings classified as saved by promoted (booked + Promoted, no competing Eligible non-original non-promoted contestant on the attempt)."
     group_label: "MONETARY"
   }
 
