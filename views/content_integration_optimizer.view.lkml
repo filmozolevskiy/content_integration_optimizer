@@ -284,14 +284,14 @@ view: content_integration_optimizer {
         CASE
           WHEN ${next_eligible_non_promoted_revenue} IS NULL
           THEN NULL
-          WHEN (${TABLE}.revenue - ${next_eligible_non_promoted_revenue}) <= 0
+          WHEN (${TABLE}.revenue - ${next_eligible_non_promoted_revenue}) < 0
           THEN NULL
           ELSE ABS(${TABLE}.revenue - ${next_eligible_non_promoted_revenue})
         END
       ELSE NULL
     END ;;
     group_label: "MONETARY"
-    description: "Booked + Promoted only: absolute uplift vs the next Eligible, non-promoted contestant on the same attempt with rank greater than this row (skips failed or non-eligible rows between). Uplift is the algebraic difference between this row's revenue and that competitor; when both are negative, a positive uplift means the promoted booking loses less (better margin) than the next alternative. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that. NULL when uplift vs next is zero or negative, when no such next competitor exists, or when not booked/not promoted."
+    description: "Booked + Promoted only: absolute uplift vs the next Eligible, non-promoted contestant on the same attempt with rank greater than this row (skips failed or non-eligible rows between). Uplift is the algebraic difference between this row's revenue and that competitor; when both are negative, a positive uplift means the promoted booking loses less (better margin) than the next alternative. Shows 0.00 when revenue ties the next competitor. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that. NULL when this row is strictly worse than the next competitor (negative uplift), when no such next competitor exists, or when not booked/not promoted."
   }
 
   # -------------------------
@@ -659,7 +659,7 @@ view: content_integration_optimizer {
     sql: ${promoted_booking_extra_revenue} ;;
     value_format: "#,##0.00"
     label: "Promoted Booking Extra Revenue (Sum)"
-    description: "Sum of promoted_booking_extra_revenue. Excludes non-positive uplift vs the next Eligible non-promoted contestant (by rank). Includes positive algebraic uplift when both revenues are negative, reported as absolute magnitude."
+    description: "Sum of promoted_booking_extra_revenue. Excludes rows with strictly negative uplift vs the next Eligible non-promoted contestant (by rank); ties (0.00) are included. Includes positive algebraic uplift when both revenues are negative, reported as absolute magnitude."
     group_label: "MONETARY"
   }
 
