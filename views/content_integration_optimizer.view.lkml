@@ -456,14 +456,6 @@ view: content_integration_optimizer {
     description: "Yes when this row is the booked candidate with a Promoted tag, and there is no other Eligible contestant on the same attempt who is neither the original (reprice_type) nor Promoted. Use for bookings that only succeed because a promoted option existed alongside original or other non-competing paths."
   }
 
-  dimension: saved_by_promoted_revenue {
-    type: number
-    value_format: "#,##0.00"
-    sql: CASE WHEN ${is_saved_by_promoted} THEN ${TABLE}.revenue ELSE NULL END ;;
-    group_label: "MONETARY"
-    description: "Candidate revenue when this row is a booking classified as saved by promoted (is_saved_by_promoted); NULL otherwise."
-  }
-
   dimension: is_mixed_fare_type {
     type: yesno
     sql: CASE WHEN EXISTS (
@@ -689,15 +681,6 @@ view: content_integration_optimizer {
     value_format: "#,##0.00"
     label: "Promoted Booking Extra Revenue (Sum)"
     description: "Sum of promoted_booking_extra_revenue. When a next Eligible non-promoted competitor exists, excludes rows with strictly negative uplift vs that competitor; ties (0.00) are included. When no next competitor exists, sums booked promoted revenue. Algebraic uplift when both revenues are negative uses absolute difference vs next; solo promoted bookings contribute full row revenue."
-    group_label: "MONETARY"
-  }
-
-  measure: saved_by_promoted_revenue_sum {
-    type: sum
-    sql: ${saved_by_promoted_revenue} ;;
-    value_format: "#,##0.00"
-    label: "Saved by Promoted Revenue (Sum)"
-    description: "Sum of revenue for bookings classified as saved by promoted (booked + Promoted, no competing Eligible non-original non-promoted contestant on the attempt)."
     group_label: "MONETARY"
   }
 
