@@ -429,7 +429,7 @@ view: content_integration_optimizer {
 
   dimension: is_saved_by_promoted {
     type: yesno
-    label: "Saved by promoted"
+    label: "Is Saved by promoted"
     sql: CASE
       WHEN ${booking_id} IS NOT NULL
         AND ${is_promoted}
