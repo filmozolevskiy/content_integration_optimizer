@@ -55,7 +55,7 @@ view: content_integration_optimizer {
         AND oc_parent.reprice_type = 'single_to_multi'
         AND oc_parent.created_at > ${start_date_bound}
     ) ;;
-    description: "True if this contestant is a child of a 'single_to_multi' reprice type."
+    description: "TEMPORARY: True if this contestant is a child of a 'single_to_multi' reprice type. This logic should be removed once the underlying data source correctly identifies these as Inadmissible."
   }
 
   dimension: has_next_eligible_candidate {
@@ -290,7 +290,7 @@ view: content_integration_optimizer {
           WHEN ${is_child_of_single_to_multi} THEN 'Inadmissible'
           ELSE ${TABLE}.candidacy
         END ;;
-    description: "Candidate eligibility status. Overrides 'Eligible' to 'Inadmissible' if the contestant is a child of a 'single_to_multi' reprice type."
+    description: "TEMPORARY OVERRIDE: Candidate eligibility status. Overrides 'Eligible' to 'Inadmissible' if the contestant is a child of a 'single_to_multi' reprice type. This override should be removed once the source data is corrected."
     group_label: "3. BUCKETS"
     suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
   }
