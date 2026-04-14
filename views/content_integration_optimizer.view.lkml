@@ -93,25 +93,6 @@ view: content_integration_optimizer {
     description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise."
   }
 
-  dimension: is_booking_successful {
-    hidden: yes
-    type: yesno
-    sql: CASE
-      WHEN ${booking_id} IS NOT NULL
-      THEN EXISTS (
-        SELECT 1
-        FROM ota.bookings b
-        WHERE b.id = ${booking_id}
-          AND (
-            b.cancel_reason IS NULL
-            OR b.cancel_reason IN ('customer_request', 'test', 'cc_decline', 'fraud')
-          )
-      )
-      ELSE FALSE
-    END ;;
-    description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
-  }
-
   # -------------------------
   # Keys (hidden)
   # -------------------------
@@ -155,6 +136,25 @@ view: content_integration_optimizer {
   dimension: affiliate_id         { type: number sql: ${optimizer_attempts.affiliate_id} ;; group_label: "2. CONTESTANT INFO" }
   dimension: target_id            { type: number sql: ${optimizer_attempts.target_id} ;; group_label: "2. CONTESTANT INFO" }
   dimension: booking_id           { type: number sql: ${optimizer_attempt_bookings.booking_id} ;; group_label: "2. CONTESTANT INFO" }
+
+  dimension: is_booking_successful {
+    type: yesno
+    sql: CASE
+      WHEN ${booking_id} IS NOT NULL
+      THEN EXISTS (
+        SELECT 1
+        FROM ota.bookings b
+        WHERE b.id = ${booking_id}
+          AND (
+            b.cancel_reason IS NULL
+            OR b.cancel_reason IN ('customer_request', 'test', 'cc_decline', 'fraud')
+          )
+      )
+      ELSE FALSE
+    END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
+  }
 
   dimension: debug_link {
     type: string
