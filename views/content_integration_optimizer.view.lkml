@@ -137,25 +137,6 @@ view: content_integration_optimizer {
   dimension: target_id            { type: number sql: ${optimizer_attempts.target_id} ;; group_label: "2. CONTESTANT INFO" }
   dimension: booking_id           { type: number sql: ${optimizer_attempt_bookings.booking_id} ;; group_label: "2. CONTESTANT INFO" }
 
-  dimension: is_booking_successful {
-    type: yesno
-    sql: CASE
-      WHEN ${booking_id} IS NOT NULL
-      THEN EXISTS (
-        SELECT 1
-        FROM ota.bookings b
-        WHERE b.id = ${booking_id}
-          AND (
-            b.cancel_reason IS NULL
-            OR b.cancel_reason IN ('customer_request', 'test', 'cc_decline', 'fraud')
-          )
-      )
-      ELSE FALSE
-    END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
-  }
-
   dimension: debug_link {
     type: string
     sql: CASE
@@ -459,6 +440,25 @@ view: content_integration_optimizer {
     END ;;
     group_label: "4. TAGS"
     description: "Yes when this row is the booked candidate with a Promoted tag, the booking was successful, and there is no other Eligible, non-promoted contestant on the same attempt with a higher rank (using has_next_eligible_candidate). This identifies successful bookings that only succeeded because a promoted option existed without other competing eligible paths."
+  }
+
+  dimension: is_booking_successful {
+    type: yesno
+    sql: CASE
+      WHEN ${booking_id} IS NOT NULL
+      THEN EXISTS (
+        SELECT 1
+        FROM ota.bookings b
+        WHERE b.id = ${booking_id}
+          AND (
+            b.cancel_reason IS NULL
+            OR b.cancel_reason IN ('customer_request', 'test', 'cc_decline', 'fraud')
+          )
+      )
+      ELSE FALSE
+    END ;;
+    group_label: "4. TAGS"
+    description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
   }
 
   dimension: is_mixed_fare_type {
