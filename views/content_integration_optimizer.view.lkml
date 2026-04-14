@@ -45,6 +45,19 @@ view: content_integration_optimizer {
     ) ;;
   }
 
+  dimension: is_child_of_single_to_multi {
+    hidden: yes
+    type: yesno
+    sql: EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidates oc_parent
+      WHERE oc_parent.id = ${TABLE}.parent_id
+        AND oc_parent.reprice_type = 'single_to_multi'
+        AND oc_parent.created_at > ${start_date_bound}
+    ) ;;
+    description: "True if this contestant is a child of a 'single_to_multi' reprice type."
+  }
+
   dimension: has_next_eligible_candidate {
     hidden: yes
     type: yesno
@@ -273,8 +286,11 @@ view: content_integration_optimizer {
 
   dimension: candidacy {
     type: string
-    sql: ${TABLE}.candidacy ;;
-    description: "Candidate eligibility status"
+    sql: CASE
+          WHEN ${is_child_of_single_to_multi} THEN 'Inadmissible'
+          ELSE ${TABLE}.candidacy
+        END ;;
+    description: "Candidate eligibility status. Overrides 'Eligible' to 'Inadmissible' if the contestant is a child of a 'single_to_multi' reprice type."
     group_label: "3. BUCKETS"
     suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
   }
