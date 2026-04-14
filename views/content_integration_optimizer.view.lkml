@@ -93,7 +93,7 @@ view: content_integration_optimizer {
     description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise."
   }
 
-  dimension: is_booking_successful {
+  dimension: is_booking_attempt_successful {
     hidden: yes
     type: yesno
     sql: CASE
@@ -323,6 +323,7 @@ view: content_integration_optimizer {
     sql: CASE
       WHEN ${booking_id} IS NOT NULL
         AND ${is_promoted}
+        AND ${is_booking_successful}
       THEN
         CASE
           WHEN ${has_next_eligible_candidate}
@@ -339,7 +340,7 @@ view: content_integration_optimizer {
       ELSE NULL
     END ;;
     group_label: "MONETARY"
-    description: "Booked + Promoted only: when another Eligible non-promoted competitor exists at a higher rank on this attempt, value is absolute uplift vs that contestant (algebraic difference; 0.00 on tie; both revenues may be negative). When there is no such next competitor, value is this row's revenue only. NULL when a next competitor exists but this row is strictly worse than it (negative uplift), on rare data inconsistencies, or when not booked/not promoted. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that."
+    description: "Booked + Promoted + Successful only: when another Eligible non-promoted competitor exists at a higher rank on this attempt, value is absolute uplift vs that contestant (algebraic difference; 0.00 on tie; both revenues may be negative). When there is no such next competitor, value is this row's revenue only. NULL when a next competitor exists but this row is strictly worse than it (negative uplift), on rare data inconsistencies, or when not booked/not promoted/not successful. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that."
   }
 
   # -------------------------
@@ -451,12 +452,13 @@ view: content_integration_optimizer {
     sql: CASE
       WHEN ${booking_id} IS NOT NULL
         AND ${is_promoted}
+        AND ${is_booking_successful}
         AND NOT ${has_next_eligible_candidate}
       THEN TRUE
       ELSE FALSE
     END ;;
     group_label: "4. TAGS"
-    description: "Yes when this row is the booked candidate with a Promoted tag, and there is no other Eligible, non-promoted contestant on the same attempt with a higher rank (using has_next_eligible_candidate). This identifies bookings that only succeeded because a promoted option existed without other competing eligible paths."
+    description: "Yes when this row is the booked candidate with a Promoted tag, the booking was successful, and there is no other Eligible, non-promoted contestant on the same attempt with a higher rank (using has_next_eligible_candidate). This identifies successful bookings that only succeeded because a promoted option existed without other competing eligible paths."
   }
 
   dimension: is_mixed_fare_type {
