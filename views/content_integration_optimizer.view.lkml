@@ -432,28 +432,12 @@ view: content_integration_optimizer {
     sql: CASE
       WHEN ${booking_id} IS NOT NULL
         AND ${is_promoted}
-        AND NOT EXISTS (
-          SELECT 1
-          FROM ota.optimizer_candidates oc
-          WHERE oc.attempt_id = ${attempt_id}
-            AND oc.created_at > ${start_date_bound}
-            AND oc.id <> ${TABLE}.id
-            AND oc.candidacy = 'Eligible'
-            AND COALESCE(oc.reprice_type, '') <> 'original'
-            AND NOT EXISTS (
-              SELECT 1
-              FROM ota.optimizer_candidate_tags oct
-              INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-              WHERE oct.candidate_id = oc.id
-                AND ot.name = 'Promoted'
-                AND oct.created_at > ${start_date_bound}
-            )
-        )
+        AND NOT ${has_next_eligible_candidate}
       THEN TRUE
       ELSE FALSE
     END ;;
     group_label: "4. TAGS"
-    description: "Yes when this row is the booked candidate with a Promoted tag, and there is no other Eligible contestant on the same attempt who is neither the original (reprice_type) nor Promoted. Use for bookings that only succeed because a promoted option existed alongside original or other non-competing paths."
+    description: "Yes when this row is the booked candidate with a Promoted tag, and there is no other Eligible, non-promoted contestant on the same attempt with a higher rank (using has_next_eligible_candidate). This identifies bookings that only succeeded because a promoted option existed without other competing eligible paths."
   }
 
   dimension: is_mixed_fare_type {
