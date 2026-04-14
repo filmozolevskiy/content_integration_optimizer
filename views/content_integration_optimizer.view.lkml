@@ -45,10 +45,33 @@ view: content_integration_optimizer {
     ) ;;
   }
 
+  dimension: has_next_eligible_candidate {
+    hidden: yes
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidates oc2
+      WHERE oc2.attempt_id = ${TABLE}.attempt_id
+        AND oc2.created_at > ${start_date_bound}
+        AND oc2.id <> ${TABLE}.id
+        AND oc2.candidacy = 'Eligible'
+        AND oc2.`rank` > ${TABLE}.rank
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ota.optimizer_candidate_tags oct
+          INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+          WHERE oct.candidate_id = oc2.id
+            AND ot.name = 'Promoted'
+            AND oct.created_at > ${start_date_bound}
+        )
+    ) THEN TRUE ELSE FALSE END ;;
+    description: "True when there is a next competitor: another Eligible contestant on the same attempt with strictly greater rank than this row, with no Promoted tag in the start_date window (exclude candidates tagged Promoted)."
+  }
+
   dimension: next_eligible_non_promoted_revenue {
     hidden: yes
     type: number
-    sql: (
+    sql: CASE WHEN ${has_next_eligible_candidate} THEN (
       SELECT oc2.revenue
       FROM ota.optimizer_candidates oc2
       WHERE oc2.attempt_id = ${TABLE}.attempt_id
@@ -66,7 +89,8 @@ view: content_integration_optimizer {
         )
       ORDER BY oc2.`rank` ASC, oc2.id ASC
       LIMIT 1
-    ) ;;
+    ) ELSE NULL END ;;
+    description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise."
   }
 
   # -------------------------
@@ -282,16 +306,21 @@ view: content_integration_optimizer {
         AND ${is_promoted}
       THEN
         CASE
-          WHEN ${next_eligible_non_promoted_revenue} IS NULL
-          THEN NULL
-          WHEN (${TABLE}.revenue - ${next_eligible_non_promoted_revenue}) < 0
-          THEN NULL
-          ELSE ABS(${TABLE}.revenue - ${next_eligible_non_promoted_revenue})
+          WHEN ${has_next_eligible_candidate}
+          THEN
+            CASE
+              WHEN ${next_eligible_non_promoted_revenue} IS NULL
+              THEN NULL
+              WHEN (${TABLE}.revenue - ${next_eligible_non_promoted_revenue}) < 0
+              THEN NULL
+              ELSE ABS(${TABLE}.revenue - ${next_eligible_non_promoted_revenue})
+            END
+          ELSE ${TABLE}.revenue
         END
       ELSE NULL
     END ;;
     group_label: "MONETARY"
-    description: "Booked + Promoted only: absolute uplift vs the next Eligible, non-promoted contestant on the same attempt with rank greater than this row (skips failed or non-eligible rows between). Uplift is the algebraic difference between this row's revenue and that competitor; when both are negative, a positive uplift means the promoted booking loses less (better margin) than the next alternative. Shows 0.00 when revenue ties the next competitor. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that. NULL when this row is strictly worse than the next competitor (negative uplift), when no such next competitor exists, or when not booked/not promoted."
+    description: "Booked + Promoted only: when another Eligible non-promoted competitor exists at a higher rank on this attempt, value is absolute uplift vs that contestant (algebraic difference; 0.00 on tie; both revenues may be negative). When there is no such next competitor, value is this row's revenue only. NULL when a next competitor exists but this row is strictly worse than it (negative uplift), on rare data inconsistencies, or when not booked/not promoted. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that."
   }
 
   # -------------------------
@@ -659,7 +688,7 @@ view: content_integration_optimizer {
     sql: ${promoted_booking_extra_revenue} ;;
     value_format: "#,##0.00"
     label: "Promoted Booking Extra Revenue (Sum)"
-    description: "Sum of promoted_booking_extra_revenue. Excludes rows with strictly negative uplift vs the next Eligible non-promoted contestant (by rank); ties (0.00) are included. Includes positive algebraic uplift when both revenues are negative, reported as absolute magnitude."
+    description: "Sum of promoted_booking_extra_revenue. When a next Eligible non-promoted competitor exists, excludes rows with strictly negative uplift vs that competitor; ties (0.00) are included. When no next competitor exists, sums booked promoted revenue. Algebraic uplift when both revenues are negative uses absolute difference vs next; solo promoted bookings contribute full row revenue."
     group_label: "MONETARY"
   }
 
