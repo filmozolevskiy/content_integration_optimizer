@@ -93,7 +93,7 @@ view: content_integration_optimizer {
     description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise."
   }
 
-  dimension: is_booking_attempt_successful {
+  dimension: is_booking_successful {
     hidden: yes
     type: yesno
     sql: CASE
