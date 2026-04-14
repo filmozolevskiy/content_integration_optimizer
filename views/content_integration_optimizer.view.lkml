@@ -70,6 +70,12 @@ view: content_integration_optimizer {
         AND oc2.candidacy = 'Eligible'
         AND oc2.`rank` > ${TABLE}.rank
         AND NOT EXISTS (
+          SELECT 1 FROM ota.optimizer_candidates oc_p
+          WHERE oc_p.id = oc2.parent_id
+            AND oc_p.reprice_type = 'single_to_multi'
+            AND oc_p.created_at > ${start_date_bound}
+        )
+        AND NOT EXISTS (
           SELECT 1
           FROM ota.optimizer_candidate_tags oct
           INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
@@ -78,7 +84,7 @@ view: content_integration_optimizer {
             AND oct.created_at > ${start_date_bound}
         )
     ) THEN TRUE ELSE FALSE END ;;
-    description: "True when there is a next competitor: another Eligible contestant on the same attempt with strictly greater rank than this row, with no Promoted tag in the start_date window (exclude candidates tagged Promoted)."
+    description: "True when there is a next competitor: another Eligible contestant on the same attempt with strictly greater rank than this row, with no Promoted tag in the start_date window (exclude candidates tagged Promoted). Also excludes children of single_to_multi reprice types."
   }
 
   dimension: next_eligible_non_promoted_revenue {
@@ -93,6 +99,12 @@ view: content_integration_optimizer {
         AND oc2.candidacy = 'Eligible'
         AND oc2.`rank` > ${TABLE}.rank
         AND NOT EXISTS (
+          SELECT 1 FROM ota.optimizer_candidates oc_p
+          WHERE oc_p.id = oc2.parent_id
+            AND oc_p.reprice_type = 'single_to_multi'
+            AND oc_p.created_at > ${start_date_bound}
+        )
+        AND NOT EXISTS (
           SELECT 1
           FROM ota.optimizer_candidate_tags oct
           INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
@@ -103,7 +115,7 @@ view: content_integration_optimizer {
       ORDER BY oc2.`rank` ASC, oc2.id ASC
       LIMIT 1
     ) ELSE NULL END ;;
-    description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise."
+    description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise. Excludes children of single_to_multi reprice types."
   }
 
   # -------------------------
@@ -237,19 +249,30 @@ view: content_integration_optimizer {
             WHERE oc2.attempt_id = ${attempt_id}
               AND oc2.candidacy = 'Eligible'
               AND oc2.created_at > ${start_date_bound}
+              AND NOT EXISTS (
+                SELECT 1 FROM ota.optimizer_candidates oc_p
+                WHERE oc_p.id = oc2.parent_id
+                  AND oc_p.reprice_type = 'single_to_multi'
+                  AND oc_p.created_at > ${start_date_bound}
+              )
           ) = 1
           AND (
             SELECT COUNT(*)
             FROM ota.optimizer_candidates oc3
             WHERE oc3.attempt_id = ${attempt_id}
               AND oc3.created_at > ${start_date_bound}
-              AND oc3.candidacy <> 'Eligible'
+              AND (oc3.candidacy <> 'Eligible' OR EXISTS (
+                SELECT 1 FROM ota.optimizer_candidates oc_p
+                WHERE oc_p.id = oc3.parent_id
+                  AND oc_p.reprice_type = 'single_to_multi'
+                  AND oc_p.created_at > ${start_date_bound}
+              ))
           ) >= 1
           THEN TRUE
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "NOTE! Very heavy! True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets"
+    description: "NOTE! Very heavy! True when the attempt_id has only one distinct content source across eligible contestants (GDS for non-Amadeus, gds_account_id for Amadeus) and at least one contestant in other candidacy buckets. Excludes children of single_to_multi reprice types from eligibility."
   }
 
   dimension: is_optimizer_off {
