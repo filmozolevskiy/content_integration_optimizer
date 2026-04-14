@@ -259,12 +259,12 @@ view: content_integration_optimizer {
     type: yesno
     sql: CASE
           WHEN ${booking_id} IS NOT NULL
-            AND ${contestant_id} <> ${original_contestant_id}
+            AND NOT ${is_original}
           THEN TRUE
           ELSE FALSE
         END ;;
     group_label: "2. CONTESTANT INFO"
-    description: "NOTE! Very heavy! True if the booked contestant is not the original one (optimized)"
+    description: "True if the booked contestant is not the original one (optimized). Uses is_original to identify the starting contestant."
   }
 
   # -------------------------
