@@ -93,6 +93,25 @@ view: content_integration_optimizer {
     description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise."
   }
 
+  dimension: is_booking_successful {
+    hidden: yes
+    type: yesno
+    sql: CASE
+      WHEN ${booking_id} IS NOT NULL
+      THEN EXISTS (
+        SELECT 1
+        FROM ota.bookings b
+        WHERE b.id = ${booking_id}
+          AND (
+            b.cancel_reason IS NULL
+            OR b.cancel_reason IN ('customer_request', 'test', 'cc_decline', 'fraud')
+          )
+      )
+      ELSE FALSE
+    END ;;
+    description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
+  }
+
   # -------------------------
   # Keys (hidden)
   # -------------------------
