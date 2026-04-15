@@ -500,6 +500,22 @@ view: content_integration_optimizer {
     description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
   }
 
+  dimension: is_test_booking {
+    type: yesno
+    sql: CASE
+      WHEN ${booking_id} IS NOT NULL
+      THEN EXISTS (
+        SELECT 1
+        FROM ota.bookings b
+        WHERE b.id = ${booking_id}
+          AND (b.is_test = 1 OR b.cancel_reason = 'test')
+      )
+      ELSE FALSE
+    END ;;
+    group_label: "4. TAGS"
+    description: "True if the booking associated with this candidate is a test booking (is_test = 1 or cancel_reason = 'test')."
+  }
+
   dimension: is_mixed_fare_type {
     type: yesno
     sql: CASE WHEN EXISTS (
