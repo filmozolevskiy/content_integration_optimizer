@@ -234,6 +234,13 @@ view: content_integration_optimizer {
     group_label: "2. CONTESTANT INFO"
   }
 
+  dimension: reprice_type {
+    type: string
+    sql: ${TABLE}.reprice_type ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "The type of repricing applied to this candidate (e.g., original, single_to_multi, etc.)"
+  }
+
   dimension: is_unique_contestant {
     type: yesno
     sql: CASE
