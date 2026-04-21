@@ -45,6 +45,19 @@ view: content_integration_optimizer {
     ) ;;
   }
 
+  dimension: original_contestant_gds_account_id {
+    hidden: yes
+    type: string
+    sql: (
+      SELECT oc_orig.gds_account_id
+      FROM ota.optimizer_candidates oc_orig
+      WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+        AND oc_orig.reprice_type = 'original'
+        AND oc_orig.created_at > ${start_date_bound}
+      LIMIT 1
+    ) ;;
+  }
+
   dimension: is_child_of_single_to_multi {
     hidden: yes
     type: yesno
@@ -178,6 +191,15 @@ view: content_integration_optimizer {
   }
 
   dimension: gds_account_id       { type: string sql: ${TABLE}.gds_account_id ;; group_label: "2. CONTESTANT INFO" }
+
+  dimension: original_office_id {
+    type: string
+    sql: ${original_contestant_gds_account_id} ;;
+    group_label: "2. CONTESTANT INFO"
+    label: "Original Office ID"
+    description: "The gds_account_id (office ID) of the ORIGINAL contestant on this attempt. Filtering by a specific value (e.g. 'DIDACAD') returns every candidate on attempts where that office was the original, so you can analyze the full distribution of content generated against it."
+  }
+
   dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; group_label: "2. CONTESTANT INFO" }
 
   dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "2. CONTESTANT INFO"}
