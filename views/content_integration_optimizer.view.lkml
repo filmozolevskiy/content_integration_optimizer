@@ -32,19 +32,6 @@ view: content_integration_optimizer {
     ) ;;
   }
 
-  dimension: original_contestant_revenue {
-    hidden: yes
-    type: number
-    sql: (
-      SELECT oc_orig.revenue
-      FROM ota.optimizer_candidates oc_orig
-      WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
-        AND oc_orig.reprice_type = 'original'
-        AND oc_orig.created_at > ${start_date_bound}
-      LIMIT 1
-    ) ;;
-  }
-
   dimension: original_contestant_gds_account_id {
     hidden: yes
     type: string
@@ -365,6 +352,31 @@ view: content_integration_optimizer {
   dimension: segment_revenue      { type: number value_format: "#,##0.00" sql: ${TABLE}.segment_revenue ;; group_label: "MONETARY" }
 
   dimension: revenue              { type: number value_format: "#,##0.00" sql: ${TABLE}.revenue ;; group_label: "MONETARY" }
+
+  dimension: original_contestant_revenue {
+    type: number
+    value_format: "#,##0.00"
+    sql: (
+      SELECT oc_orig.revenue
+      FROM ota.optimizer_candidates oc_orig
+      WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+        AND oc_orig.reprice_type = 'original'
+        AND oc_orig.created_at > ${start_date_bound}
+      LIMIT 1
+    ) ;;
+    group_label: "MONETARY"
+    label: "Original Contestant Revenue"
+    description: "Revenue of the ORIGINAL contestant (reprice_type = 'original') on this attempt. Every row on the same attempt returns the same value, so it can be used for side-by-side comparison against this row's revenue. NOTE: summing this field across rows will multi-count per attempt — use it as a dimension or filter, not as a measure-source."
+  }
+
+  dimension: booked_contestant_revenue {
+    type: number
+    value_format: "#,##0.00"
+    sql: CASE WHEN ${booking_id} IS NOT NULL THEN ${revenue} END ;;
+    group_label: "MONETARY"
+    label: "Booked Contestant Revenue"
+    description: "Revenue of the booked contestant on this attempt. Populated only on the candidate row that was actually booked (i.e. where booking_id is not null); NULL on other candidates of the same attempt. Safe to sum across any grouping — each attempt contributes at most one row."
+  }
 
   dimension: promoted_booking_extra_revenue {
     type: number
