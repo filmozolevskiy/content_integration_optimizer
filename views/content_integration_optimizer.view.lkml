@@ -339,6 +339,22 @@ view: content_integration_optimizer {
   # -------------------------
 
   dimension: candidate_currency   { type: string sql: ${TABLE}.currency ;; group_label: "MONETARY"}
+
+  dimension: displayed_currency {
+    type: string
+    sql: (
+      SELECT bca.display_currency
+      FROM ota.bookability_customer_attempts bca
+      WHERE bca.search_hash = ${optimizer_attempts.search_id}
+        AND bca.date_created > ${start_date_bound}
+      ORDER BY bca.date_created DESC
+      LIMIT 1
+    ) ;;
+    group_label: "MONETARY"
+    label: "Displayed Currency"
+    description: "Currency displayed to the customer on the search results page, pulled from ota.bookability_customer_attempts by matching search_hash to optimizer_attempts.search_id. When multiple bookability records exist for the same search_hash, returns the most recent one (by date_created). Filtered to date_created > start_date_bound for performance."
+  }
+
   dimension: base                 { type: number value_format: "#,##0.00" sql: ${TABLE}.base ;; group_label: "MONETARY" }
   dimension: tax                  { type: number value_format: "#,##0.00" sql: ${TABLE}.tax ;; group_label: "MONETARY" }
   dimension: markup               { type: number value_format: "#,##0.00" sql: ${TABLE}.markup ;; group_label: "MONETARY" }
@@ -557,18 +573,15 @@ view: content_integration_optimizer {
 
   dimension: is_test_booking {
     type: yesno
-    sql: CASE
-      WHEN ${booking_id} IS NOT NULL
-      THEN EXISTS (
-        SELECT 1
-        FROM ota.bookings b
-        WHERE b.id = ${booking_id}
-          AND (b.is_test = 1 OR b.cancel_reason = 'test')
-      )
-      ELSE FALSE
-    END ;;
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_attempt_bookings oab
+      INNER JOIN ota.bookings b ON b.id = oab.booking_id
+      WHERE oab.attempt_id = ${TABLE}.attempt_id
+        AND (b.is_test = 1 OR b.cancel_reason = 'test')
+    ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
-    description: "True if the booking associated with this candidate is a test booking (is_test = 1 or cancel_reason = 'test')."
+    description: "True for every candidate on an attempt whose booking is a test (is_test = 1 or cancel_reason = 'test'). Previously this was only set on the booked row (where booking_id is populated); now it propagates to all contestants on the same attempt so filtering out test data removes the whole attempt, not just the winning row."
   }
 
   dimension: is_mixed_fare_type {
