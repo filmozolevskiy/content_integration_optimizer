@@ -507,6 +507,20 @@ view: content_integration_optimizer {
     description: "True when the candidate has a Promoted tag in range."
   }
 
+  dimension: is_rogue{
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Rogue'
+        AND oct.created_at > ${start_date_bound}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "True when the candidate has a Rogue tag in range."
+  }
+
   dimension: is_saved_by_promoted {
     type: yesno
     label: "Is Saved by promoted"
