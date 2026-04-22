@@ -187,6 +187,22 @@ view: content_integration_optimizer {
     description: "The gds_account_id (office ID) of the ORIGINAL contestant on this attempt. Filtering by a specific value (e.g. 'DIDACAD') returns every candidate on attempts where that office was the original, so you can analyze the full distribution of content generated against it."
   }
 
+  dimension: booked_contestant_office_id_on_attempt {
+    type: string
+    sql: (
+      SELECT oc_booked.gds_account_id
+      FROM ota.optimizer_attempt_bookings oab
+      INNER JOIN ota.optimizer_candidates oc_booked ON oc_booked.id = oab.candidate_id
+      WHERE oab.attempt_id = ${TABLE}.attempt_id
+        AND oab.booking_id IS NOT NULL
+        AND oc_booked.created_at > ${start_date_bound}
+      LIMIT 1
+    ) ;;
+    group_label: "2. CONTESTANT INFO"
+    label: "Booked Office ID (on Attempt)"
+    description: "The gds_account_id (office ID) of the BOOKED contestant on this attempt, propagated to every row of the attempt. Useful for side-by-side comparison: which office sourced a Price/Drop candidate vs. which office actually got the booking. NULL when no booking exists on the attempt."
+  }
+
   dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; group_label: "2. CONTESTANT INFO" }
 
   dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "2. CONTESTANT INFO"}
