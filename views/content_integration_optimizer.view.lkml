@@ -394,6 +394,23 @@ view: content_integration_optimizer {
     description: "Revenue of the booked contestant on this attempt. Populated only on the candidate row that was actually booked (i.e. where booking_id is not null); NULL on other candidates of the same attempt. Safe to sum across any grouping — each attempt contributes at most one row."
   }
 
+  dimension: booked_contestant_revenue_on_attempt {
+    type: number
+    value_format: "#,##0.00"
+    sql: (
+      SELECT oc_booked.revenue
+      FROM ota.optimizer_attempt_bookings oab
+      INNER JOIN ota.optimizer_candidates oc_booked ON oc_booked.id = oab.candidate_id
+      WHERE oab.attempt_id = ${TABLE}.attempt_id
+        AND oab.booking_id IS NOT NULL
+        AND oc_booked.created_at > ${start_date_bound}
+      LIMIT 1
+    ) ;;
+    group_label: "MONETARY"
+    label: "Booked Contestant Revenue (on Attempt)"
+    description: "Revenue of the BOOKED contestant on this attempt, propagated to every row of the attempt. Use for side-by-side comparison against this row's revenue (e.g., compare a Price or Drop candidate to whatever got booked). NULL when no booking exists on the attempt. NOTE: summing this field across rows will multi-count per attempt — use it as a dimension or filter, not as a measure source. For safe-to-sum totals, use `booked_contestant_revenue` instead."
+  }
+
   dimension: promoted_booking_extra_revenue {
     type: number
     value_format: "#,##0.00"
