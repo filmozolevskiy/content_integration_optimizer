@@ -471,6 +471,21 @@ view: content_integration_optimizer {
     description: "Reason for being ineligible"
   }
 
+  dimension: dropped_reason {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+      FROM ota.optimizer_candidate_tags oct
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND ot.name = 'Dropped'
+        AND oct.created_at > ${start_date_bound}
+    ) ;;
+    group_label: "4. TAGS"
+    description: "Reason for dropped"
+  }
+
+
   dimension: is_alternative_marketing_carrier {
     type: yesno
     sql: CASE WHEN EXISTS (
