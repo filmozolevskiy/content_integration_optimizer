@@ -216,19 +216,19 @@ view: content_integration_optimizer {
   dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "2. CONTESTANT INFO"}
   dimension: trip_type            { type: string sql: ${optimizer_attempts.trip_type} ;; group_label: "2. CONTESTANT INFO"}
 
-  dimension: is_multicurrency {
-    type: yesno
-    sql: CASE
-          WHEN ${TABLE}.currency IS NOT NULL
-               AND ${optimizer_attempts.currency} IS NOT NULL
-               AND ${TABLE}.currency <> ${optimizer_attempts.currency}
-          THEN TRUE
-          ELSE FALSE
-        END ;;
-    group_label: "2. CONTESTANT INFO"
-    hidden: yes
-    description: "Check if candidate currency differs from attempt currency."
-  }
+  # dimension: is_multicurrency {
+  #   type: yesno
+  #   sql: CASE
+  #         WHEN ${TABLE}.currency IS NOT NULL
+  #             AND ${optimizer_attempts.currency} IS NOT NULL
+  #             AND ${TABLE}.currency <> ${optimizer_attempts.currency}
+  #         THEN TRUE
+  #         ELSE FALSE
+  #       END ;;
+  #   group_label: "2. CONTESTANT INFO"
+  #   hidden: yes
+  #   description: "Check if candidate currency differs from attempt currency."
+  # }
 
   dimension: multiticket_part {
     type: string
@@ -498,6 +498,19 @@ view: content_integration_optimizer {
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
     description: "Check if candidate has AlternativeMarketingCarrier tag"
+  }
+
+  dimension: is_multicurrency {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidate_tags oct
+      WHERE oct.candidate_id = ${TABLE}.id
+        AND oct.reprice_type = 'multicurrency'
+        AND oct.created_at > ${start_date_bound}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    description: "Check if candidate currency differs from attempt currency."
   }
 
   dimension: is_downgrade {
