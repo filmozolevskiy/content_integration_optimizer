@@ -475,10 +475,10 @@ view: content_integration_optimizer {
     type: yesno
     sql: EXISTS (
       SELECT 1
-      FROM ota.optimizer_candidates oc_parent
-      WHERE oc_parent.id = ${TABLE}.parent_id
-        AND oc_parent.reprice_type = 'multicurrency'
-        AND oc_parent.created_at > ${start_date_bound}
+      FROM ota.optimizer_candidates oct
+      WHERE oct.candidate_id = ${TABLE}.candidate_id
+        AND oct.reprice_type = 'multicurrency'
+        AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "4. TAGS"
     description: "Multicurrency contestants."
