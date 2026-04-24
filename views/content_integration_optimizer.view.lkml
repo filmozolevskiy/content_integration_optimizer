@@ -480,6 +480,7 @@ view: content_integration_optimizer {
         AND oc_parent.reprice_type = 'multicurrency'
         AND oc_parent.created_at > ${start_date_bound}
     ) ;;
+    group_label: "4. TAGS"
     description: "Multicurrency contestants."
   }
 
