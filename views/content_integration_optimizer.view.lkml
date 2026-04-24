@@ -216,20 +216,6 @@ view: content_integration_optimizer {
   dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "2. CONTESTANT INFO"}
   dimension: trip_type            { type: string sql: ${optimizer_attempts.trip_type} ;; group_label: "2. CONTESTANT INFO"}
 
-  # dimension: is_multicurrency {
-  #   type: yesno
-  #   sql: CASE
-  #         WHEN ${TABLE}.currency IS NOT NULL
-  #             AND ${optimizer_attempts.currency} IS NOT NULL
-  #             AND ${TABLE}.currency <> ${optimizer_attempts.currency}
-  #         THEN TRUE
-  #         ELSE FALSE
-  #       END ;;
-  #   group_label: "2. CONTESTANT INFO"
-  #   hidden: yes
-  #   description: "Check if candidate currency differs from attempt currency."
-  # }
-
   dimension: multiticket_part {
     type: string
     sql: (
@@ -251,16 +237,6 @@ view: content_integration_optimizer {
         END ;;
     group_label: "2. CONTESTANT INFO"
     description: "Check if candidate came from search."
-  }
-
-  dimension: is_multicurrency {
-    type: yesno
-    sql: CASE
-          WHEN ${TABLE}.reprice_type = 'multicurrency' THEN TRUE
-          ELSE FALSE
-        END ;;
-    group_label: "2. CONTESTANT INFO"
-    description: "True if this candidate's reprice_type is 'multicurrency'."
   }
 
   dimension: reprice_index {
@@ -481,17 +457,14 @@ view: content_integration_optimizer {
     description: "Reason for being ineligible"
   }
 
-  dimension: is_multicurrecny {
+  dimension: is_multicurrency {
     type: yesno
-    sql: EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidates oct
-      WHERE oct.candidate_id = ${TABLE}.candidate_id
-        AND oct.reprice_type = 'multicurrency'
-        AND oct.created_at > ${start_date_bound}
-    ) ;;
+    sql: CASE
+          WHEN ${TABLE}.reprice_type = 'multicurrency' THEN TRUE
+          ELSE FALSE
+        END ;;
     group_label: "4. TAGS"
-    description: "Multicurrency contestants."
+    description: "True if this candidate's reprice_type is 'multicurrency'."
   }
 
   dimension: dropped_reason {
@@ -507,7 +480,6 @@ view: content_integration_optimizer {
     group_label: "4. TAGS"
     description: "Reason for dropped"
   }
-
 
   dimension: is_alternative_marketing_carrier {
     type: yesno
