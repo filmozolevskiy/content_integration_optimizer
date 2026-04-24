@@ -253,6 +253,16 @@ view: content_integration_optimizer {
     description: "Check if candidate came from search."
   }
 
+  dimension: is_multicurrency {
+    type: yesno
+    sql: CASE
+          WHEN ${TABLE}.reprice_type = 'multicurrency' THEN TRUE
+          ELSE FALSE
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    description: "True if this candidate's reprice_type is 'multicurrency'."
+  }
+
   dimension: reprice_index {
     type: string
     sql: ${TABLE}.reprice_index ;;
