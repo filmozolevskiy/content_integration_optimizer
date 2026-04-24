@@ -471,6 +471,18 @@ view: content_integration_optimizer {
     description: "Reason for being ineligible"
   }
 
+  dimension: is_multicurrecny {
+    type: yesno
+    sql: EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidates oc_parent
+      WHERE oc_parent.id = ${TABLE}.parent_id
+        AND oc_parent.reprice_type = 'multicurrency'
+        AND oc_parent.created_at > ${start_date_bound}
+    ) ;;
+    description: "Multicurrency contestants."
+  }
+
   dimension: dropped_reason {
     type: string
     sql: (
@@ -500,18 +512,6 @@ view: content_integration_optimizer {
     description: "Check if candidate has AlternativeMarketingCarrier tag"
   }
 
-  dimension: is_multicurrency {
-    type: yesno
-    sql: CASE WHEN EXISTS (
-      SELECT 1
-      FROM ota.optimizer_candidate_tags oct
-      WHERE oct.candidate_id = ${TABLE}.id
-        AND oct.reprice_type = 'multicurrency'
-        AND oct.created_at > ${start_date_bound}
-    ) THEN TRUE ELSE FALSE END ;;
-    group_label: "4. TAGS"
-    description: "Check if candidate currency differs from attempt currency."
-  }
 
   dimension: is_downgrade {
     type: yesno
