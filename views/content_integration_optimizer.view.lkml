@@ -159,6 +159,17 @@ view: content_integration_optimizer {
   dimension: checkout_id          { type: number sql: ${optimizer_attempts.checkout_id} ;; group_label: "2. CONTESTANT INFO" }
 
   dimension: affiliate_id         { type: number sql: ${optimizer_attempts.affiliate_id} ;; group_label: "2. CONTESTANT INFO" }
+
+  dimension: affiliate_group {
+    type: string
+    sql: CASE
+          WHEN ${optimizer_attempts.affiliate_id} IN (1042, 16, 8, 49, 782, 1221, 506) THEN 'EXTERNAL'
+          ELSE 'INTERNAL'
+        END ;;
+    group_label: "2. CONTESTANT INFO"
+    label: "Affiliate Group"
+    description: "EXTERNAL when affiliate_id is in (1042, 16, 8, 49, 782, 1221, 506); otherwise INTERNAL."
+  }
   dimension: target_id            { type: number sql: ${optimizer_attempts.target_id} ;; group_label: "2. CONTESTANT INFO" }
   dimension: booking_id           { type: number sql: ${optimizer_attempt_bookings.booking_id} ;; group_label: "2. CONTESTANT INFO" }
 
