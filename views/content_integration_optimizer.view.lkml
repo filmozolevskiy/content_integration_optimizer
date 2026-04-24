@@ -499,7 +499,7 @@ view: content_integration_optimizer {
   dimension: is_downgrade {
     type: yesno
     sql: COALESCE((
-      SELECT MAX(CASE WHEN ot.name = 'Downgrade' THEN 1 ELSE 0 END)
+      SELECT MAX(CASE WHEN oct.value = 'Downgrade' THEN 1 ELSE 0 END)
       FROM ota.optimizer_candidate_tags oct
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
@@ -520,7 +520,6 @@ view: content_integration_optimizer {
         AND oct.created_at > ${start_date_bound}
     ) ;;
     group_label: "4. TAGS"
-    hidden: yes
     description: "Distinct Demoted tag values for this candidate, comma-separated."
   }
 
@@ -649,7 +648,7 @@ view: content_integration_optimizer {
       FROM ota.optimizer_candidate_tags oct
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
       WHERE oct.candidate_id = ${TABLE}.id
-        AND ot.name = 'Risky'
+        AND oct.value = 'Risky'
         AND oct.created_at > ${start_date_bound}
     ) THEN TRUE ELSE FALSE END ;;
     group_label: "4. TAGS"
