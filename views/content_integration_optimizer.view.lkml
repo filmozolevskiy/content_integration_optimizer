@@ -169,6 +169,7 @@ view: content_integration_optimizer {
     group_label: "2. CONTESTANT INFO"
     label: "Affiliate Group"
     description: "EXTERNAL when affiliate_id is in (1042, 16, 8, 49, 782, 1221, 506); otherwise INTERNAL."
+    suggestions: ["EXTERNAL", "INTERNAL"]
   }
   dimension: target_id            { type: number sql: ${optimizer_attempts.target_id} ;; group_label: "2. CONTESTANT INFO" }
   dimension: booking_id           { type: number sql: ${optimizer_attempt_bookings.booking_id} ;; group_label: "2. CONTESTANT INFO" }
