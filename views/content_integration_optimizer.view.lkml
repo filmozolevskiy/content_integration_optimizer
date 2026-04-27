@@ -218,7 +218,12 @@ view: content_integration_optimizer {
   dimension: commission_trip_id   { type: number sql: ${TABLE}.commission_trip_id ;; group_label: "2. CONTESTANT INFO" }
 
   dimension: gds                  { type: string sql: ${TABLE}.gds ;; group_label: "2. CONTESTANT INFO"}
-  dimension: fare_type            { type: string sql: ${TABLE}.fare_type ;; group_label: "2. CONTESTANT INFO"}
+  dimension: fare_type {
+    type: string
+    sql: ${TABLE}.fare_type ;;
+    group_label: "2. CONTESTANT INFO"
+    suggestions: ["published", "private"]
+  }
   dimension: validating_carrier   { type: string sql: ${TABLE}.validating_carrier ;; group_label: "2. CONTESTANT INFO"}
   dimension: pricing_options      { type: string sql: ${TABLE}.pricing_options ;; group_label: "2. CONTESTANT INFO"}
   dimension: flight_numbers       { type: string sql: ${TABLE}.flight_numbers ;; group_label: "2. CONTESTANT INFO"}
@@ -226,7 +231,12 @@ view: content_integration_optimizer {
   dimension: cabin_codes          { type: string sql: ${TABLE}.cabin_codes ;; group_label: "2. CONTESTANT INFO"}
   dimension: fare_bases           { type: string sql: ${TABLE}.fare_bases ;; group_label: "2. CONTESTANT INFO"}
   dimension: fare_families        { type: string sql: ${TABLE}.fare_families ;; group_label: "2. CONTESTANT INFO"}
-  dimension: trip_type            { type: string sql: ${optimizer_attempts.trip_type} ;; group_label: "2. CONTESTANT INFO"}
+  dimension: trip_type {
+    type: string
+    sql: ${optimizer_attempts.trip_type} ;;
+    group_label: "2. CONTESTANT INFO"
+    suggestions: ["oneway", "roundtrip", "multi"]
+  }
 
   dimension: multiticket_part {
     type: string
@@ -345,7 +355,7 @@ view: content_integration_optimizer {
         END ;;
     description: "TEMPORARY OVERRIDE: Candidate eligibility status. Overrides 'Eligible' to 'Inadmissible' if the contestant is a child of a 'single_to_multi' reprice type. This override should be removed once the source data is corrected."
     group_label: "3. BUCKETS"
-    suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible"]
+    suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible", "Saver"]
   }
 
   # -------------------------
