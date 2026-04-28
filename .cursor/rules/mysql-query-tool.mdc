@@ -1,0 +1,104 @@
+---
+alwaysApply: true
+---
+# MySQL Query Tool — Use Before Trusting LookML SQL
+
+This project ships a CLI tool, [scripts/mysql_query.py](mdc:scripts/mysql_query.py), that connects to the MySQL `ota` database backing the Looker model. It is the **primary way to verify data assumptions** before writing or modifying LookML.
+
+## When to Use It
+
+Use the tool whenever you need to ground a code change in real data, for example:
+
+- Confirming that a column exists, its type, and whether it is nullable, before referencing it in a `dimension`/`measure`.
+- Listing tag names actually present in `ota.optimizer_tags` before writing a `WHERE ot.name = '...'` predicate.
+- Sanity-checking the shape of a `derived_table` SQL by running it against a small recent date window.
+- Validating that a new measure produces sensible counts on a known day before committing.
+- Checking column-level access in case the Looker connection has different grants than your shell.
+
+If you are about to commit a SQL change without running at least one query against the database, stop and run a query first.
+
+## How to Use It
+
+The script reads credentials from environment variables. Load them once per shell session:
+
+```bash
+set -a && source .env && set +a
+```
+
+Then invoke any of the four subcommands:
+
+```bash
+# Inspect a table's columns (uses INFORMATION_SCHEMA, so it shows real types/comments)
+python scripts/mysql_query.py describe optimizer_candidates ota
+python scripts/mysql_query.py describe optimizer_candidate_tags ota
+
+# List all tables in the ota database
+python scripts/mysql_query.py tables ota
+
+# Run an ad-hoc query (read-only is enforced by DB grants, not by this script)
+python scripts/mysql_query.py query "
+  SELECT name, count(*) AS uses
+  FROM ota.optimizer_tags ot
+  JOIN ota.optimizer_candidate_tags oct ON oct.tag_id = ot.id
+  WHERE oct.created_at > now() - interval 7 day
+  GROUP BY name
+  ORDER BY uses DESC
+"
+
+# Run a heavy aggregation across a date range in chunks (auto-sums numeric cols
+# across chunks; non-numeric columns are treated as group keys)
+python scripts/mysql_query.py batch \
+  --start 2026-03-01 --end 2026-03-31 --chunk-days 1 \
+  "SELECT validating_carrier, count(*) AS n
+     FROM ota.optimizer_candidates
+    WHERE created_at BETWEEN '{start}' AND '{end}'
+    GROUP BY validating_carrier"
+```
+
+## Rules of Engagement
+
+1. **Read-only.** Never run `INSERT`, `UPDATE`, `DELETE`, `DROP`, or any DDL. Database grants should already prevent it; you should not even try.
+2. **Filter by date.** `optimizer_candidates`, `optimizer_candidate_tags`, and `optimizer_attempts` are large. Always include a `created_at` filter (`> now() - interval N day`, or `BETWEEN`) to keep responses cheap and fast.
+3. **No `SELECT *`.** Project only the columns you need; this matches the LookML conventions in this repo and avoids surprises with column-level grants.
+4. **Use `batch` for long ranges.** A single query covering many months can time out. The `batch` subcommand splits the range into chunks and aggregates numeric columns automatically.
+5. **Reference real columns.** Before adding a dimension to a view, run `describe <table>` to confirm the exact column name and type. The schemas in [schemas/table schemas.sql](mdc:schemas/table schemas.sql) are reference-only and may drift from production.
+6. **Mirror Looker's database prefix.** All queries should use the fully-qualified `ota.<table>` form, matching `sql_table_name: ota.optimizer_candidates ;;` in the views.
+7. **No credentials in code.** Credentials live in `.env` (gitignored). Do not paste passwords into queries, comments, or commit messages. The `.env` file is gitignored — keep it that way.
+
+## Setup (first run only)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # then edit .env with real credentials
+```
+
+After that, every new shell session just needs:
+
+```bash
+source .venv/bin/activate
+set -a && source .env && set +a
+```
+
+## Common Patterns Worth Knowing
+
+```sql
+-- Existing tag names (drives WHERE ot.name = '...' predicates in views)
+SELECT name FROM ota.optimizer_tags ORDER BY name;
+
+-- Recent candidacy distribution
+SELECT candidacy, count(*) AS n
+FROM ota.optimizer_candidates
+WHERE created_at > now() - interval 7 day
+GROUP BY candidacy
+ORDER BY n DESC;
+
+-- One-attempt sanity check before believing a derived table
+SELECT id, attempt_id, reprice_type, candidacy, `rank`, revenue
+FROM ota.optimizer_candidates
+WHERE attempt_id = <some_id>
+ORDER BY `rank`;
+```
+
+See [scripts/README.md](mdc:scripts/README.md) for the full CLI reference.
