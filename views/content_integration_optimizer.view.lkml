@@ -696,6 +696,93 @@ view: content_integration_optimizer {
   }
 
   # -------------------------
+  # 4. TAGS — Attempt-level (from ota.optimizer_attempt_tags)
+  #
+  # These tags are stored per-attempt, not per-candidate. The same value is
+  # therefore returned on EVERY contestant row of a matching attempt. Filter on
+  # them and you keep the entire attempt, not just one row. They use the same
+  # tag-name lookup (ota.optimizer_tags) as the candidate-level tags.
+  # -------------------------
+
+  dimension: attempt_is_risky {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_attempt_tags oat
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+      WHERE oat.attempt_id = ${TABLE}.attempt_id
+        AND ot.name = 'Risky'
+        AND oat.created_at > ${start_date_bound}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    label: "Attempt Is Risky"
+    description: "True when the ATTEMPT carries a Risky tag (from ota.optimizer_attempt_tags). Distinct from the candidate-level is_risky: this propagates to every contestant of the attempt."
+  }
+
+  dimension: attempt_has_seats {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_attempt_tags oat
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+      WHERE oat.attempt_id = ${TABLE}.attempt_id
+        AND ot.name = 'Seats'
+        AND oat.created_at > ${start_date_bound}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    label: "Attempt Has Seats Tag"
+    description: "True when the ATTEMPT has a Seats tag. Applies to every contestant of the attempt."
+  }
+
+  dimension: attempt_is_test {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_attempt_tags oat
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+      WHERE oat.attempt_id = ${TABLE}.attempt_id
+        AND ot.name = 'Test'
+        AND oat.created_at > ${start_date_bound}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    label: "Attempt Is Test"
+    description: "True when the ATTEMPT is tagged Test in ota.optimizer_attempt_tags. Distinct from is_test_booking, which is derived from ota.bookings.is_test / cancel_reason. Both can be useful for excluding non-production traffic."
+  }
+
+  dimension: attempt_filtered_values {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(DISTINCT oat.value ORDER BY oat.value SEPARATOR ', ')
+      FROM ota.optimizer_attempt_tags oat
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+      WHERE oat.attempt_id = ${TABLE}.attempt_id
+        AND ot.name = 'Filtered'
+        AND oat.created_at > ${start_date_bound}
+    ) ;;
+    group_label: "4. TAGS"
+    label: "Attempt Filtered Values"
+    description: "Comma-separated values of any Filtered tags on the ATTEMPT (e.g. 'ApplePayPaymentMethod, PayPalPaymentMethod'). Indicates payment methods or other inputs that were filtered out for the attempt."
+  }
+
+  dimension: attempt_tag_pairs {
+    type: string
+    sql: (
+      SELECT GROUP_CONCAT(
+        DISTINCT CONCAT(ot.name, ':', COALESCE(oat.value, ''))
+        ORDER BY ot.name, oat.value
+        SEPARATOR ', '
+      )
+      FROM ota.optimizer_attempt_tags oat
+      INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+      WHERE oat.attempt_id = ${TABLE}.attempt_id
+        AND oat.created_at > ${start_date_bound}
+    ) ;;
+    group_label: "4. TAGS"
+    label: "Attempt Tag pairs (debug)"
+    description: "Debug field: raw name:value concat of all attempt-level tags for this attempt, mirroring tag_pairs at the candidate level."
+  }
+
+  # -------------------------
   # Measures - Counts
   # -------------------------
 
