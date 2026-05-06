@@ -796,6 +796,19 @@ view: content_integration_optimizer {
     description: "True when the ATTEMPT has at least one contestant with reprice_type = 'original'. Most attempts (~99%) do, but a small share (~1%) do not — those are typically reprice-only flows or data-quality cases worth investigating. Source: ota.optimizer_candidates (not optimizer_attempt_tags). Propagates to every contestant of the attempt."
   }
 
+  dimension: attempt_has_booking_id {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_attempt_bookings oab
+      WHERE oab.attempt_id = ${TABLE}.attempt_id
+        AND oab.booking_id IS NOT NULL
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    label: "Attempt Has Booking ID"
+    description: "True when the ATTEMPT has at least one row in ota.optimizer_attempt_bookings with a non-null booking_id (i.e. any candidate on the attempt was booked). Distinct from is_optimized, which is per-row and also requires the booked candidate to differ from the original. Propagates to every contestant of the attempt — useful for filtering to attempts that produced a booking, regardless of which candidate won."
+  }
+
   # -------------------------
   # Measures - Counts
   # -------------------------
