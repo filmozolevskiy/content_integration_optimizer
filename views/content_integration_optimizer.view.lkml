@@ -794,6 +794,14 @@ view: content_integration_optimizer {
     group_label: "Counts"
   }
 
+  measure: attempts_count {
+    type: count_distinct
+    sql: ${attempt_id} ;;
+    label: "Attempts Count"
+    description: "Count of distinct optimizer attempts. Each attempt has many candidate rows (contestants), so this is typically much smaller than All Contestants Count. Use this when you want to count optimizer runs, not the candidates within them."
+    group_label: "Counts"
+  }
+
   measure: bookings_count {
     type: count_distinct
     sql: ${booking_id} ;;
