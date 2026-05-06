@@ -782,6 +782,20 @@ view: content_integration_optimizer {
     description: "Debug field: raw name:value concat of all attempt-level tags for this attempt, mirroring tag_pairs at the candidate level."
   }
 
+  dimension: attempt_has_original {
+    type: yesno
+    sql: CASE WHEN EXISTS (
+      SELECT 1
+      FROM ota.optimizer_candidates oc_orig
+      WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+        AND oc_orig.reprice_type = 'original'
+        AND oc_orig.created_at > ${start_date_bound}
+    ) THEN TRUE ELSE FALSE END ;;
+    group_label: "4. TAGS"
+    label: "Attempt Has Original"
+    description: "True when the ATTEMPT has at least one contestant with reprice_type = 'original'. Most attempts (~99%) do, but a small share (~1%) do not — those are typically reprice-only flows or data-quality cases worth investigating. Source: ota.optimizer_candidates (not optimizer_attempt_tags). Propagates to every contestant of the attempt."
+  }
+
   # -------------------------
   # Measures - Counts
   # -------------------------
