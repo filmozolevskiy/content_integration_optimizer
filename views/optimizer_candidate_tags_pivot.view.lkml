@@ -19,7 +19,7 @@ view: optimizer_candidate_tags_pivot {
         MAX(CASE WHEN ot.name = 'Demoted'                     THEN 1 ELSE 0 END) AS is_demoted
       FROM ota.optimizer_candidate_tags oct
       INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE oct.created_at > TIMESTAMP('2025-01-01')
+      WHERE {% condition optimizer_candidates.created_at %} oct.created_at {% endcondition %}
       GROUP BY oct.candidate_id
     ;;
   }
