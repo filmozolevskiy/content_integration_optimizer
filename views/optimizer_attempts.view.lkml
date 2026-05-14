@@ -57,3 +57,20 @@ view: optimizer_attempts {
     group_label: "MONETARY"
   }
 }
+
+  dimension: api_experiment_name {
+    type: string
+    sql: JSON_UNQUOTE(JSON_EXTRACT(${TABLE}.package, '$.info.api_experiment_name')) ;;
+    group_label: "2. CONTESTANT INFO"
+    label: "API Experiment Name"
+    description: "Experiment name from optimizer_attempts.package->info.api_experiment_name. NULL when no experiment was active for this attempt."
+  }
+
+  dimension: api_experiment_variation {
+    type: string
+    sql: JSON_UNQUOTE(JSON_EXTRACT(${TABLE}.package, '$.info.api_experiment_variation')) ;;
+    group_label: "2. CONTESTANT INFO"
+    label: "API Experiment Variation"
+    description: "Experiment variation (e.g. 'control', 'treatment') from optimizer_attempts.package->info.api_experiment_variation."
+  }
+}
