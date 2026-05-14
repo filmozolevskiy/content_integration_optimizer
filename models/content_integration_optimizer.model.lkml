@@ -4,7 +4,7 @@ include: "/views/**/*.view.lkml"
 
 datagroup: optimizer_candidates_datagroup {
   sql_trigger: SELECT MAX(created_at) FROM ota.optimizer_candidates ;;
-  max_cache_age: "1 hour"
+  max_cache_age: "3 hour"
 }
 
 explore: content_integration_optimizer {
