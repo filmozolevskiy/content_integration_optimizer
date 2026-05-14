@@ -56,7 +56,6 @@ view: optimizer_attempts {
     hidden: yes
     group_label: "MONETARY"
   }
-}
 
   dimension: api_experiment_name {
     type: string
