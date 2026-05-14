@@ -10,7 +10,7 @@ view: optimizer_attempt_tags_pivot {
         MAX(CASE WHEN ot.name = 'Test'  THEN 1 ELSE 0 END) AS attempt_is_test
       FROM ota.optimizer_attempt_tags oat
       INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
-      WHERE {% condition optimizer_attempts.created_at %} oat.created_at {% endcondition %}
+      WHERE oat.created_at > TIMESTAMP({% parameter content_integration_optimizer.start_date %})
       GROUP BY oat.attempt_id
     ;;
   }
