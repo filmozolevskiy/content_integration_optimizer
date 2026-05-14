@@ -26,4 +26,24 @@ explore: content_integration_optimizer {
       ${optimizer_attempt_bookings.candidate_id} = ${content_integration_optimizer.id}
       AND ${optimizer_attempt_bookings.attempt_id} = ${content_integration_optimizer.attempt_id} ;;
   }
+
+  join: optimizer_candidate_tags_pivot {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_candidate_tags_pivot.candidate_id} = ${content_integration_optimizer.id} ;;
+  }
+
+  join: optimizer_attempt_tags_pivot {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_attempt_tags_pivot.attempt_id} = ${content_integration_optimizer.attempt_id} ;;
+  }
+
+  join: optimizer_parent_candidates {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_parent_candidates.id} = ${content_integration_optimizer.parent_id}
+      AND ${optimizer_parent_candidates.reprice_type} = 'single_to_multi'
+      AND ${optimizer_parent_candidates.created_at_raw} > ${content_integration_optimizer.start_date_bound} ;;
+  }
 }
