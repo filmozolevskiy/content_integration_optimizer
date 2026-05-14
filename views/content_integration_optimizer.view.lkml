@@ -48,8 +48,14 @@ view: content_integration_optimizer {
  dimension: is_child_of_single_to_multi {
  hidden: yes
  type: yesno
- sql: ${optimizer_parent_candidates.id} IS NOT NULL ;;
- description: "True if this contestant's parent has reprice_type = 'single_to_multi'. Resolved via join to optimizer_parent_candidates (no correlated subquery)."
+ sql: EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidates oc_parent
+ WHERE oc_parent.id = ${TABLE}.parent_id
+ AND oc_parent.reprice_type = 'single_to_multi'
+ AND oc_parent.created_at > ${start_date_bound}
+ ) ;;
+ description: "TEMPORARY: True if this contestant is a child of a 'single_to_multi' reprice type. This logic should be removed once the underlying data source correctly identifies these as Inadmissible."
  }
 
  dimension: has_next_eligible_candidate {
@@ -234,7 +240,14 @@ view: content_integration_optimizer {
 
  dimension: multiticket_part {
  type: string
- sql: ${optimizer_candidate_tags_pivot.multiticket_part} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'MultiTicketPart'
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "2. CONTESTANT INFO"
  }
 
@@ -469,7 +482,14 @@ view: content_integration_optimizer {
 
  dimension: exception {
  type: string
- sql: ${optimizer_candidate_tags_pivot.exception} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Exception'
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  description: "Reason for being ineligible"
  }
@@ -486,35 +506,69 @@ view: content_integration_optimizer {
 
  dimension: dropped_reason {
  type: string
- sql: ${optimizer_candidate_tags_pivot.dropped_reason} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Dropped'
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  description: "Reason for dropped"
  }
 
  dimension: is_alternative_marketing_carrier {
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_alternative_marketing_carrier} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'AlternativeMarketingCarrier'
+ AND oct.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  description: "Check if candidate has AlternativeMarketingCarrier tag"
  }
 
  dimension: is_downgrade {
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_downgrade} = 1 ;;
+ sql: COALESCE((
+ SELECT MAX(CASE WHEN oct.value = 'Downgrade' THEN 1 ELSE 0 END)
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND oct.created_at > ${start_date_bound}
+ ), 0) = 1 ;;
  group_label: "4. TAGS"
  description: "True when the candidate has at least one Downgrade tag in the start_date window."
  }
 
  dimension: demoted_values {
  type: string
- sql: ${optimizer_candidate_tags_pivot.demoted_values} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Demoted'
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  description: "Distinct Demoted tag values for this candidate, comma-separated."
  }
 
  dimension: promoted_values {
  type: string
- sql: ${optimizer_candidate_tags_pivot.promoted_values} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Promoted'
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  hidden: yes
  description: "Distinct Promoted tag values for this candidate, comma-separated."
@@ -522,28 +576,56 @@ view: content_integration_optimizer {
 
  dimension: unfit_values {
  type: string
- sql: ${optimizer_candidate_tags_pivot.unfit_values} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oct.value ORDER BY oct.value SEPARATOR ', ')
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Unfit'
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  description: "Distinct Unfit tag values for this candidate, comma-separated. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Unfit'. Examples observed: 'Multi-Currency+Seat Selection Fees', 'PayPalPaymentMethod', 'ApplePayPaymentMethod', 'No display currency'."
  }
 
  dimension: is_demoted {
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_demoted} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Demoted'
+ AND oct.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  description: "True when the candidate has a Demoted tag in range."
  }
 
  dimension: is_promoted {
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_promoted} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Promoted'
+ AND oct.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  description: "True when the candidate has a Promoted tag in range."
  }
 
- dimension: is_rogue {
+ dimension: is_rogue{
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_rogue} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'Rogue'
+ AND oct.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  description: "True when the candidate has a Rogue tag in range."
  }
@@ -597,21 +679,45 @@ view: content_integration_optimizer {
 
  dimension: is_mixed_fare_type {
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_mixed_fare_type} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND ot.name = 'MixedFareType'
+ AND oct.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  description: "Check if candidate has MixedFareType tag"
  }
 
  dimension: is_risky {
  type: yesno
- sql: ${optimizer_candidate_tags_pivot.is_risky} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND oct.value = 'Risky'
+ AND oct.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  description: "Check if candidate has Risky tag"
  }
 
  dimension: tag_pairs {
  type: string
- sql: ${optimizer_candidate_tags_pivot.tag_pairs} ;;
+ sql: (
+ SELECT GROUP_CONCAT(
+ DISTINCT CONCAT(ot.name, ':', COALESCE(oct.value, ''))
+ ORDER BY ot.name, oct.value
+ SEPARATOR ', '
+ )
+ FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = ${TABLE}.id
+ AND oct.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  label: "Tag pairs (debug)"
  description: "Field for debugging and comparing raw concatenated output in the UI."
@@ -628,7 +734,14 @@ view: content_integration_optimizer {
 
  dimension: attempt_is_risky {
  type: yesno
- sql: ${optimizer_attempt_tags_pivot.attempt_is_risky} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_attempt_tags oat
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+ WHERE oat.attempt_id = ${TABLE}.attempt_id
+ AND ot.name = 'Risky'
+ AND oat.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  label: "Attempt Is Risky"
  description: "True when the ATTEMPT carries a Risky tag (from ota.optimizer_attempt_tags). Distinct from the candidate-level is_risky: this propagates to every contestant of the attempt."
@@ -636,7 +749,14 @@ view: content_integration_optimizer {
 
  dimension: attempt_has_seats {
  type: yesno
- sql: ${optimizer_attempt_tags_pivot.attempt_has_seats} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_attempt_tags oat
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+ WHERE oat.attempt_id = ${TABLE}.attempt_id
+ AND ot.name = 'Seats'
+ AND oat.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  label: "Attempt Has Seats Tag"
  description: "True when the ATTEMPT has a Seats tag. Applies to every contestant of the attempt."
@@ -644,7 +764,14 @@ view: content_integration_optimizer {
 
  dimension: attempt_is_test {
  type: yesno
- sql: ${optimizer_attempt_tags_pivot.attempt_is_test} = 1 ;;
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_attempt_tags oat
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+ WHERE oat.attempt_id = ${TABLE}.attempt_id
+ AND ot.name = 'Test'
+ AND oat.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
  group_label: "4. TAGS"
  label: "Attempt Is Test"
  description: "True when the ATTEMPT is tagged Test in ota.optimizer_attempt_tags. Distinct from is_test_booking, which is derived from ota.bookings.is_test / cancel_reason. Both can be useful for excluding non-production traffic."
@@ -652,7 +779,14 @@ view: content_integration_optimizer {
 
  dimension: attempt_filtered_values {
  type: string
- sql: ${optimizer_attempt_tags_pivot.attempt_filtered_values} ;;
+ sql: (
+ SELECT GROUP_CONCAT(DISTINCT oat.value ORDER BY oat.value SEPARATOR ', ')
+ FROM ota.optimizer_attempt_tags oat
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+ WHERE oat.attempt_id = ${TABLE}.attempt_id
+ AND ot.name = 'Filtered'
+ AND oat.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  label: "Attempt Filtered Values"
  description: "Comma-separated values of any Filtered tags on the ATTEMPT (e.g. 'ApplePayPaymentMethod, PayPalPaymentMethod'). Indicates payment methods or other inputs that were filtered out for the attempt."
@@ -660,7 +794,17 @@ view: content_integration_optimizer {
 
  dimension: attempt_tag_pairs {
  type: string
- sql: ${optimizer_attempt_tags_pivot.attempt_tag_pairs} ;;
+ sql: (
+ SELECT GROUP_CONCAT(
+ DISTINCT CONCAT(ot.name, ':', COALESCE(oat.value, ''))
+ ORDER BY ot.name, oat.value
+ SEPARATOR ', '
+ )
+ FROM ota.optimizer_attempt_tags oat
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+ WHERE oat.attempt_id = ${TABLE}.attempt_id
+ AND oat.created_at > ${start_date_bound}
+ ) ;;
  group_label: "4. TAGS"
  label: "Attempt Tag pairs (debug)"
  description: "Debug field: raw name:value concat of all attempt-level tags for this attempt, mirroring tag_pairs at the candidate level."
