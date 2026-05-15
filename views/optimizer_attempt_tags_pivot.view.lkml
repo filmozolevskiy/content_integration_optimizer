@@ -1,4 +1,7 @@
 view: optimizer_attempt_tags_pivot {
+  # Hidden pivot — attempt-level analogue of optimizer_candidate_tags_pivot.
+  # Why (2026-05-15, FM): same STRAIGHT_JOIN + {% condition %} pattern.
+  # See optimizer_candidate_tags_pivot.view.lkml for the full rationale.
   derived_table: {
     sql:
       SELECT

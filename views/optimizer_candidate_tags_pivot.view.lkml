@@ -1,4 +1,9 @@
 view: optimizer_candidate_tags_pivot {
+  # Hidden pivot — collapses 10+ correlated GROUP_CONCAT subqueries on
+  # ota.optimizer_candidate_tags into one wide row per candidate.
+  # Why (2026-05-15, FM): see PR #1. STRAIGHT_JOIN + {% condition %}
+  # brought the pivot from 78s to 15.6s on a 7-day window. Filters
+  # injected dynamically — do not hardcode date floors.
   derived_table: {
     sql:
       SELECT
