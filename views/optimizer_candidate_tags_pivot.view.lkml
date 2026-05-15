@@ -17,9 +17,10 @@ view: optimizer_candidate_tags_pivot {
         MAX(CASE WHEN ot.name = 'Downgrade'                   THEN 1 ELSE 0 END) AS is_downgrade,
         MAX(CASE WHEN ot.name = 'Promoted'                    THEN 1 ELSE 0 END) AS is_promoted,
         MAX(CASE WHEN ot.name = 'Demoted'                     THEN 1 ELSE 0 END) AS is_demoted
-      FROM ota.optimizer_candidate_tags oct
-      INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
-      WHERE {% condition content_integration_optimizer.date_date %} oct.created_at {% endcondition %}
+      FROM ota.optimizer_candidates oc
+      STRAIGHT_JOIN ota.optimizer_candidate_tags oct ON oct.candidate_id = oc.id
+      STRAIGHT_JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+      WHERE {% condition content_integration_optimizer.date_date %} oc.created_at {% endcondition %}
       GROUP BY oct.candidate_id
     ;;
   }
