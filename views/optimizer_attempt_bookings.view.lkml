@@ -1,4 +1,7 @@
 view: optimizer_attempt_bookings {
+  # ota.optimizer_attempt_bookings — bridge attempt → booking. Used to
+  # identify test bookings (joined to ota.bookings for is_test /
+  # cancel_reason exclusion in several dashboard tiles).
   sql_table_name: ota.optimizer_attempt_bookings ;;
 
   dimension: id {

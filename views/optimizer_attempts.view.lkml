@@ -1,4 +1,7 @@
 view: optimizer_attempts {
+  # ota.optimizer_attempts — one row per Optimizer execution (~534K rows).
+  # Carries attempt-level dimensions the candidate view doesn't have
+  # (gds, validating_carrier, affiliate_id, search_id, ...).
   sql_table_name: ota.optimizer_attempts ;;
 
   dimension: id {
