@@ -23,37 +23,6 @@ view: optimizer_candidate_tags_pivot {
       WHERE {% condition content_integration_optimizer.date_date %} oc.created_at {% endcondition %}
         AND {% condition content_integration_optimizer.gds %} oc.gds {% endcondition %}
         AND {% condition content_integration_optimizer.attempt_id %} oc.attempt_id {% endcondition %}
-        -- Boolean tag pushdowns: only narrow when the user explicitly filters "= Yes".
-        -- For "= No", outer-query filter on the pivot column handles it; pushing NOT EXISTS would
-        -- force a near-full scan with no speed-up, and incorrectly narrows other pivot columns.
-        {% if content_integration_optimizer.is_promoted._is_filtered and _filters['content_integration_optimizer.is_promoted'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_candidate_tags p
-          INNER JOIN ota.optimizer_tags pt ON pt.id = p.tag_id
-          WHERE p.candidate_id = oc.id AND pt.name = 'Promoted'
-        )
-        {% endif %}
-        {% if content_integration_optimizer.is_demoted._is_filtered and _filters['content_integration_optimizer.is_demoted'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_candidate_tags d
-          INNER JOIN ota.optimizer_tags dt ON dt.id = d.tag_id
-          WHERE d.candidate_id = oc.id AND dt.name = 'Demoted'
-        )
-        {% endif %}
-        {% if content_integration_optimizer.is_risky._is_filtered and _filters['content_integration_optimizer.is_risky'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_candidate_tags r
-          INNER JOIN ota.optimizer_tags rt ON rt.id = r.tag_id
-          WHERE r.candidate_id = oc.id AND rt.name = 'Risky'
-        )
-        {% endif %}
-        {% if content_integration_optimizer.is_rogue._is_filtered and _filters['content_integration_optimizer.is_rogue'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_candidate_tags rg
-          INNER JOIN ota.optimizer_tags rgt ON rgt.id = rg.tag_id
-          WHERE rg.candidate_id = oc.id AND rgt.name = 'Rogue'
-        )
-        {% endif %}
       GROUP BY oct.candidate_id
     ;;
   }

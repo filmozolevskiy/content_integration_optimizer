@@ -14,30 +14,6 @@ view: optimizer_attempt_tags_pivot {
       WHERE {% condition content_integration_optimizer.date_date %} oa.created_at {% endcondition %}
         AND {% condition content_integration_optimizer.gds %} oa.gds {% endcondition %}
         AND {% condition content_integration_optimizer.attempt_id %} oa.id {% endcondition %}
-        -- Boolean tag pushdowns: only narrow when the user explicitly filters "= Yes".
-        -- For "= No", outer-query filter on the pivot column handles it; pushing NOT EXISTS would
-        -- force a near-full scan with no speed-up, and incorrectly narrows other pivot columns.
-        {% if content_integration_optimizer.attempt_is_risky._is_filtered and _filters['content_integration_optimizer.attempt_is_risky'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_attempt_tags r
-          INNER JOIN ota.optimizer_tags rt ON rt.id = r.tag_id
-          WHERE r.attempt_id = oa.id AND rt.name = 'Risky'
-        )
-        {% endif %}
-        {% if content_integration_optimizer.attempt_has_seats._is_filtered and _filters['content_integration_optimizer.attempt_has_seats'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_attempt_tags s
-          INNER JOIN ota.optimizer_tags st ON st.id = s.tag_id
-          WHERE s.attempt_id = oa.id AND st.name = 'Seats'
-        )
-        {% endif %}
-        {% if content_integration_optimizer.attempt_is_test._is_filtered and _filters['content_integration_optimizer.attempt_is_test'] == 'Yes' %}
-        AND EXISTS (
-          SELECT 1 FROM ota.optimizer_attempt_tags t
-          INNER JOIN ota.optimizer_tags tt ON tt.id = t.tag_id
-          WHERE t.attempt_id = oa.id AND tt.name = 'Test'
-        )
-        {% endif %}
       GROUP BY oat.attempt_id
     ;;
   }
