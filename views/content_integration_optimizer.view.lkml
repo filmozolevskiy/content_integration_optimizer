@@ -650,6 +650,14 @@ view: content_integration_optimizer {
  description: "True when the ATTEMPT is tagged Test in ota.optimizer_attempt_tags. Distinct from is_test_booking, which is derived from ota.bookings.is_test / cancel_reason. Both can be useful for excluding non-production traffic."
  }
 
+ dimension: attempt_is_upgrade {
+ type: yesno
+ sql: ${optimizer_attempt_tags_pivot.attempt_is_upgrade} = 1 ;;
+ group_label: "4. TAGS"
+ label: "Attempt Is Upgrade"
+ description: "True when the ATTEMPT carries an Upgrade tag (from ota.optimizer_attempt_tags) — set when the optimizer formed the package as a fare-family upgrade (Trello #2896, genesis PR #53702). Propagates to every contestant of the attempt."
+ }
+
  dimension: attempt_filtered_values {
  type: string
  sql: ${optimizer_attempt_tags_pivot.attempt_filtered_values} ;;
