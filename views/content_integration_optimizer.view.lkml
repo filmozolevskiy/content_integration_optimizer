@@ -658,12 +658,28 @@ view: content_integration_optimizer {
  description: "True when the ATTEMPT carries an Upgrade tag (from ota.optimizer_attempt_tags) — set when the optimizer formed the package as a fare-family upgrade (Trello #2896, genesis PR #53702). Propagates to every contestant of the attempt."
  }
 
+ dimension: attempt_is_vcc_required {
+ type: yesno
+ sql: ${optimizer_attempt_tags_pivot.attempt_is_vcc_required} = 1 ;;
+ group_label: "4. TAGS"
+ label: "Attempt Is VCC Required"
+ description: "True when the ATTEMPT carries a VccRequired tag (from ota.optimizer_attempt_tags) — set when the chosen payment method needs a virtual credit card to fulfill (ApplePay / PayPal). Propagates to every contestant of the attempt. See attempt_vcc_required_values for the payment method."
+ }
+
  dimension: attempt_filtered_values {
  type: string
  sql: ${optimizer_attempt_tags_pivot.attempt_filtered_values} ;;
  group_label: "4. TAGS"
  label: "Attempt Filtered Values"
  description: "Comma-separated values of any Filtered tags on the ATTEMPT (e.g. 'ApplePayPaymentMethod, PayPalPaymentMethod'). Indicates payment methods or other inputs that were filtered out for the attempt."
+ }
+
+ dimension: attempt_vcc_required_values {
+ type: string
+ sql: ${optimizer_attempt_tags_pivot.attempt_vcc_required_values} ;;
+ group_label: "4. TAGS"
+ label: "Attempt VCC Required Values"
+ description: "Comma-separated values of any VccRequired tags on the ATTEMPT — the payment method that requires a virtual credit card to fulfill (e.g. 'ApplePayPaymentMethod', 'PayPalPaymentMethod'). Source: ota.optimizer_attempt_tags joined to ota.optimizer_tags on name='VccRequired'."
  }
 
  dimension: attempt_tag_pairs {
