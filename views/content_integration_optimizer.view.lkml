@@ -345,6 +345,26 @@ view: content_integration_optimizer {
  suggestions: ["Unprocessable", "Unbookable", "Inadmissible", "Unsalable", "Incalculable", "Unmatchable", "Unprofitable", "Eligible", "Saver"]
  }
 
+ dimension: has_eligible_candidates {
+ type: yesno
+ sql: EXISTS (
+ SELECT 1
+ FROM ota.optimizer_candidates oc_elig
+ WHERE oc_elig.attempt_id = ${TABLE}.attempt_id
+ AND oc_elig.created_at > ${start_date_bound}
+ AND oc_elig.candidacy = 'Eligible'
+ AND NOT EXISTS (
+ SELECT 1 FROM ota.optimizer_candidates oc_p
+ WHERE oc_p.id = oc_elig.parent_id
+ AND oc_p.reprice_type = 'single_to_multi'
+ AND oc_p.created_at > ${start_date_bound}
+ )
+ ) ;;
+ group_label: "3. BUCKETS"
+ label: "Has Eligible Candidates"
+ description: "True when the attempt has at least one contestant with candidacy='Eligible', excluding children of 'single_to_multi' reprice types (mirrors the override applied in the candidacy dimension). Value is constant per attempt — propagated to every candidate row, so use as a dimension or filter, not a measure source."
+ }
+
  # -------------------------
  # MONETARY
  # -------------------------
