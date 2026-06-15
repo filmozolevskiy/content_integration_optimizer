@@ -14,6 +14,7 @@ view: optimizer_candidate_tags_pivot {
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Promoted'                 THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS promoted_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Unfit'                    THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS unfit_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart'          THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS multiticket_part,
+        GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'RepriceStrategy'          THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS reprice_strategy,
         GROUP_CONCAT(DISTINCT CONCAT(ot.name, ':', COALESCE(oct.value, '')) ORDER BY ot.name, oct.value SEPARATOR ', ') AS tag_pairs,
         MAX(CASE WHEN ot.name = 'AlternativeMarketingCarrier' THEN 1 ELSE 0 END) AS is_alternative_marketing_carrier,
         MAX(CASE WHEN ot.name = 'MixedFareType'               THEN 1 ELSE 0 END) AS is_mixed_fare_type,
@@ -39,6 +40,7 @@ view: optimizer_candidate_tags_pivot {
   dimension: promoted_values              { type: string  sql: ${TABLE}.promoted_values              ;; hidden: yes }
   dimension: unfit_values                 { type: string  sql: ${TABLE}.unfit_values                 ;; hidden: yes }
   dimension: multiticket_part             { type: string  sql: ${TABLE}.multiticket_part             ;; hidden: yes }
+  dimension: reprice_strategy             { type: string  sql: ${TABLE}.reprice_strategy             ;; hidden: yes }
   dimension: tag_pairs                    { type: string  sql: ${TABLE}.tag_pairs                    ;; hidden: yes }
   dimension: is_alternative_marketing_carrier { type: number sql: ${TABLE}.is_alternative_marketing_carrier ;; hidden: yes }
   dimension: is_mixed_fare_type           { type: number  sql: ${TABLE}.is_mixed_fare_type           ;; hidden: yes }
