@@ -511,6 +511,13 @@ view: content_integration_optimizer {
  description: "Reason for dropped"
  }
 
+ dimension: reprice_strategy {
+ type: string
+ sql: ${optimizer_candidate_tags_pivot.reprice_strategy} ;;
+ group_label: "4. TAGS"
+ description: "RepriceStrategy tag value for this candidate (e.g. 'Best revenue', 'Revenue > Match'). Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='RepriceStrategy'."
+ }
+
  dimension: is_alternative_marketing_carrier {
  type: yesno
  sql: ${optimizer_candidate_tags_pivot.is_alternative_marketing_carrier} = 1 ;;
