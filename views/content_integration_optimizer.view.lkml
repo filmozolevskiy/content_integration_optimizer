@@ -553,6 +553,13 @@ view: content_integration_optimizer {
  description: "Distinct Unfit tag values for this candidate, comma-separated. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Unfit'. Examples observed: 'Multi-Currency+Seat Selection Fees', 'PayPalPaymentMethod', 'ApplePayPaymentMethod', 'No display currency'."
  }
 
+ dimension: acceptable_values {
+ type: string
+ sql: ${optimizer_candidate_tags_pivot.acceptable_values} ;;
+ group_label: "4. TAGS"
+ description: "Comma-separated list of the minor differences that were tolerated for this candidate (the dimensions on which the candidate diverges from the original but is still accepted for eligibility). Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Acceptable'. Examples observed 2026-06-15: 'advance_change', 'cancellation,advance_change'."
+ }
+
  dimension: is_demoted {
  type: yesno
  sql: ${optimizer_candidate_tags_pivot.is_demoted} = 1 ;;
@@ -572,6 +579,13 @@ view: content_integration_optimizer {
  sql: ${optimizer_candidate_tags_pivot.is_rogue} = 1 ;;
  group_label: "4. TAGS"
  description: "True when the candidate has a Rogue tag in range."
+ }
+
+ dimension: is_acceptable {
+ type: yesno
+ sql: ${optimizer_candidate_tags_pivot.is_acceptable} = 1 ;;
+ group_label: "4. TAGS"
+ description: "True when the candidate has minor differences from the original (e.g. change / cancellation policy) but is still considered acceptable for eligibility. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Acceptable' (tag id 242, added 2026-06-15). See acceptable_values for the specific dimensions that diverged."
  }
 
  dimension: is_saved_by_promoted {
