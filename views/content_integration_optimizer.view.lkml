@@ -588,6 +588,13 @@ view: content_integration_optimizer {
  description: "True when the candidate has minor differences from the original (e.g. change / cancellation policy) but is still considered acceptable for eligibility. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Acceptable' (tag id 242, added 2026-06-15). See acceptable_values for the specific dimensions that diverged."
  }
 
+ dimension: is_routehappy_error {
+ type: yesno
+ sql: ${optimizer_candidate_tags_pivot.is_routehappy_error} = 1 ;;
+ group_label: "4. TAGS"
+ description: "True when the candidate has a RoutehappyError tag, set when the RouteHappy lookup failed for this contestant. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='RoutehappyError' (tag id 252, added 2026-06-16). Writer currently attaches the tag with a NULL value, so no values dimension is exposed; add one if the writer starts populating value."
+ }
+
  dimension: is_saved_by_promoted {
  type: yesno
  label: "Is Saved by promoted"
