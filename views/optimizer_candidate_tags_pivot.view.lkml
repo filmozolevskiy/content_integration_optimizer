@@ -15,6 +15,7 @@ view: optimizer_candidate_tags_pivot {
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Unfit'                    THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS unfit_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart'          THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS multiticket_part,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'RepriceStrategy'          THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS reprice_strategy,
+        GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Acceptable'               THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS acceptable_values,
         GROUP_CONCAT(DISTINCT CONCAT(ot.name, ':', COALESCE(oct.value, '')) ORDER BY ot.name, oct.value SEPARATOR ', ') AS tag_pairs,
         MAX(CASE WHEN ot.name = 'AlternativeMarketingCarrier' THEN 1 ELSE 0 END) AS is_alternative_marketing_carrier,
         MAX(CASE WHEN ot.name = 'MixedFareType'               THEN 1 ELSE 0 END) AS is_mixed_fare_type,
@@ -22,7 +23,8 @@ view: optimizer_candidate_tags_pivot {
         MAX(CASE WHEN ot.name = 'Rogue'                       THEN 1 ELSE 0 END) AS is_rogue,
         MAX(CASE WHEN ot.name = 'Downgrade'                   THEN 1 ELSE 0 END) AS is_downgrade,
         MAX(CASE WHEN ot.name = 'Promoted'                    THEN 1 ELSE 0 END) AS is_promoted,
-        MAX(CASE WHEN ot.name = 'Demoted'                     THEN 1 ELSE 0 END) AS is_demoted
+        MAX(CASE WHEN ot.name = 'Demoted'                     THEN 1 ELSE 0 END) AS is_demoted,
+        MAX(CASE WHEN ot.name = 'Acceptable'                  THEN 1 ELSE 0 END) AS is_acceptable
       FROM ota.optimizer_candidates oc
       STRAIGHT_JOIN ota.optimizer_candidate_tags oct ON oct.candidate_id = oc.id
       STRAIGHT_JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
@@ -41,6 +43,7 @@ view: optimizer_candidate_tags_pivot {
   dimension: unfit_values                 { type: string  sql: ${TABLE}.unfit_values                 ;; hidden: yes }
   dimension: multiticket_part             { type: string  sql: ${TABLE}.multiticket_part             ;; hidden: yes }
   dimension: reprice_strategy             { type: string  sql: ${TABLE}.reprice_strategy             ;; hidden: yes }
+  dimension: acceptable_values            { type: string  sql: ${TABLE}.acceptable_values            ;; hidden: yes }
   dimension: tag_pairs                    { type: string  sql: ${TABLE}.tag_pairs                    ;; hidden: yes }
   dimension: is_alternative_marketing_carrier { type: number sql: ${TABLE}.is_alternative_marketing_carrier ;; hidden: yes }
   dimension: is_mixed_fare_type           { type: number  sql: ${TABLE}.is_mixed_fare_type           ;; hidden: yes }
@@ -49,4 +52,5 @@ view: optimizer_candidate_tags_pivot {
   dimension: is_downgrade                 { type: number  sql: ${TABLE}.is_downgrade                 ;; hidden: yes }
   dimension: is_promoted                  { type: number  sql: ${TABLE}.is_promoted                  ;; hidden: yes }
   dimension: is_demoted                   { type: number  sql: ${TABLE}.is_demoted                   ;; hidden: yes }
+  dimension: is_acceptable                { type: number  sql: ${TABLE}.is_acceptable                ;; hidden: yes }
 }
