@@ -7,6 +7,7 @@ view: optimizer_attempt_tags_pivot {
       SELECT
         oat.attempt_id,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Filtered' THEN oat.value END ORDER BY oat.value SEPARATOR ', ') AS attempt_filtered_values,
+        GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Restricted' THEN oat.value END ORDER BY oat.value SEPARATOR ', ') AS attempt_restricted_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'VccRequired' THEN oat.value END ORDER BY oat.value SEPARATOR ', ') AS attempt_vcc_required_values,
         GROUP_CONCAT(DISTINCT CONCAT(ot.name, ':', COALESCE(oat.value, '')) ORDER BY ot.name, oat.value SEPARATOR ', ') AS attempt_tag_pairs,
         MAX(CASE WHEN ot.name = 'Risky'       THEN 1 ELSE 0 END) AS attempt_is_risky,
@@ -26,6 +27,7 @@ view: optimizer_attempt_tags_pivot {
 
   dimension: attempt_id                  { primary_key: yes type: number sql: ${TABLE}.attempt_id                  ;; hidden: yes }
   dimension: attempt_filtered_values     { type: string     sql: ${TABLE}.attempt_filtered_values     ;; hidden: yes }
+  dimension: attempt_restricted_values   { type: string     sql: ${TABLE}.attempt_restricted_values   ;; hidden: yes }
   dimension: attempt_vcc_required_values { type: string     sql: ${TABLE}.attempt_vcc_required_values ;; hidden: yes }
   dimension: attempt_tag_pairs           { type: string     sql: ${TABLE}.attempt_tag_pairs           ;; hidden: yes }
   dimension: attempt_is_risky            { type: number     sql: ${TABLE}.attempt_is_risky            ;; hidden: yes }
