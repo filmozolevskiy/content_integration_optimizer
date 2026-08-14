@@ -721,6 +721,14 @@ view: content_integration_optimizer {
  description: "Comma-separated values of any Filtered tags on the ATTEMPT (e.g. 'ApplePayPaymentMethod, PayPalPaymentMethod'). Indicates payment methods or other inputs that were filtered out for the attempt."
  }
 
+ dimension: attempt_restricted_values {
+ type: string
+ sql: ${optimizer_attempt_tags_pivot.attempt_restricted_values} ;;
+ group_label: "4. TAGS"
+ label: "Attempt Restricted Values"
+ description: "Comma-separated values of any Restricted tags on the ATTEMPT (e.g. 'Fare increase detected', 'dida baggage selections will disable optimization'). Source: ota.optimizer_attempt_tags joined to ota.optimizer_tags on name='Restricted'. NULL when the attempt has no Restricted tag. Propagates to every contestant of the attempt."
+ }
+
  dimension: attempt_vcc_required_values {
  type: string
  sql: ${optimizer_attempt_tags_pivot.attempt_vcc_required_values} ;;
