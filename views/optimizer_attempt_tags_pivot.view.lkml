@@ -14,7 +14,8 @@ view: optimizer_attempt_tags_pivot {
         MAX(CASE WHEN ot.name = 'Seats'       THEN 1 ELSE 0 END) AS attempt_has_seats,
         MAX(CASE WHEN ot.name = 'Test'        THEN 1 ELSE 0 END) AS attempt_is_test,
         MAX(CASE WHEN ot.name = 'Upgrade'     THEN 1 ELSE 0 END) AS attempt_is_upgrade,
-        MAX(CASE WHEN ot.name = 'VccRequired' THEN 1 ELSE 0 END) AS attempt_is_vcc_required
+        MAX(CASE WHEN ot.name = 'VccRequired' THEN 1 ELSE 0 END) AS attempt_is_vcc_required,
+        MAX(CASE WHEN ot.name = 'Bundle'      THEN 1 ELSE 0 END) AS attempt_has_bundle
       FROM ota.optimizer_attempts oa
       STRAIGHT_JOIN ota.optimizer_attempt_tags oat ON oat.attempt_id = oa.id
       STRAIGHT_JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
@@ -35,4 +36,5 @@ view: optimizer_attempt_tags_pivot {
   dimension: attempt_is_test             { type: number     sql: ${TABLE}.attempt_is_test             ;; hidden: yes }
   dimension: attempt_is_upgrade          { type: number     sql: ${TABLE}.attempt_is_upgrade          ;; hidden: yes }
   dimension: attempt_is_vcc_required     { type: number     sql: ${TABLE}.attempt_is_vcc_required     ;; hidden: yes }
+  dimension: attempt_has_bundle          { type: number     sql: ${TABLE}.attempt_has_bundle          ;; hidden: yes }
 }

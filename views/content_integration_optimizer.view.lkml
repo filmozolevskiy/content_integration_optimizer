@@ -553,6 +553,14 @@ view: content_integration_optimizer {
  description: "Distinct Unfit tag values for this candidate, comma-separated. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Unfit'. Examples observed: 'Multi-Currency+Seat Selection Fees', 'PayPalPaymentMethod', 'ApplePayPaymentMethod', 'No display currency'."
  }
 
+ dimension: blocked_values {
+ type: string
+ sql: ${optimizer_candidate_tags_pivot.blocked_values} ;;
+ group_label: "4. TAGS"
+ label: "Blocked Values"
+ description: "Distinct Blocked tag values for this candidate, comma-separated. Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='Blocked'. NULL when the candidate has no Blocked tag. Examples observed last 2 days (timestamps as stored): 'Blocked by Supplier Rules: low-risk affiliate; published is blocked for fulfill', 'Kiwi non-virtual interlining with unsupported carrier(s)', 'Carrier combination is not allowed'."
+ }
+
  dimension: acceptable_values {
  type: string
  sql: ${optimizer_candidate_tags_pivot.acceptable_values} ;;
@@ -687,6 +695,14 @@ view: content_integration_optimizer {
  group_label: "4. TAGS"
  label: "Attempt Has Seats Tag"
  description: "True when the ATTEMPT has a Seats tag. Applies to every contestant of the attempt."
+ }
+
+ dimension: attempt_has_bundle {
+ type: yesno
+ sql: ${optimizer_attempt_tags_pivot.attempt_has_bundle} = 1 ;;
+ group_label: "4. TAGS"
+ label: "Attempt Has Bundle Tag"
+ description: "True when the ATTEMPT has a Bundle tag. Source: ota.optimizer_attempt_tags joined to ota.optimizer_tags on name='Bundle'. Value is always NULL. Propagates to every contestant of the attempt."
  }
 
  dimension: attempt_is_test {

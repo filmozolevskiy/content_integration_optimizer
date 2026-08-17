@@ -13,6 +13,7 @@ view: optimizer_candidate_tags_pivot {
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Demoted'                  THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS demoted_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Promoted'                 THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS promoted_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Unfit'                    THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS unfit_values,
+        GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Blocked'                  THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS blocked_values,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'MultiTicketPart'          THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS multiticket_part,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'RepriceStrategy'          THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS reprice_strategy,
         GROUP_CONCAT(DISTINCT CASE WHEN ot.name = 'Acceptable'               THEN oct.value END ORDER BY oct.value SEPARATOR ', ') AS acceptable_values,
@@ -42,6 +43,7 @@ view: optimizer_candidate_tags_pivot {
   dimension: demoted_values               { type: string  sql: ${TABLE}.demoted_values               ;; hidden: yes }
   dimension: promoted_values              { type: string  sql: ${TABLE}.promoted_values              ;; hidden: yes }
   dimension: unfit_values                 { type: string  sql: ${TABLE}.unfit_values                 ;; hidden: yes }
+  dimension: blocked_values               { type: string  sql: ${TABLE}.blocked_values               ;; hidden: yes }
   dimension: multiticket_part             { type: string  sql: ${TABLE}.multiticket_part             ;; hidden: yes }
   dimension: reprice_strategy             { type: string  sql: ${TABLE}.reprice_strategy             ;; hidden: yes }
   dimension: acceptable_values            { type: string  sql: ${TABLE}.acceptable_values            ;; hidden: yes }
