@@ -1054,7 +1054,7 @@ view: content_integration_optimizer {
  THEN ${revenue} - COALESCE(${multicurrency_unblock_fallback_revenue}, 0)
  ELSE NULL
  END ;;
- value_format: "#,##0.00"
+ value_format: "$#,##0.00"
  label: "Multicurrency Unblock Extra Revenue (Sum)"
  description: "Incremental revenue from letting dida/onefly/pkfare/flightroutes24/unififi keep multicurrency repricing on Seats-tagged attempts since the 2026-08-20 fix (Trello #3201). Compares each winning candidate's revenue to the next-LOWER-ranked Eligible candidate that isn't itself one of these newly-unblocked candidates — never a higher-ranked one, since higher-ranked candidates didn't actually win and can't be assumed to have succeeded pre-fix. When no lower-ranked fallback exists, counts the full actual revenue as extra, even if negative."
  group_label: "MONETARY"
