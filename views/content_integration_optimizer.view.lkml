@@ -112,6 +112,35 @@ view: content_integration_optimizer {
  description: "Revenue of the next Eligible, non-promoted contestant (by rank) when has_next_eligible_candidate; NULL otherwise. Excludes children of single_to_multi reprice types."
  }
 
+ # Why (2026-08-26, FM): rank-below-only fallback for the seats multicurrency
+ # unblock extra-revenue measure. Skips other newly-unblocked multicurrency
+ # rows so the extra is vs the next Eligible that would have been available
+ # before the 2026-08-20 seats unblock (Trello #3201).
+ dimension: multicurrency_unblock_fallback_revenue {
+ hidden: yes
+ type: number
+ sql: (
+ SELECT oc2.revenue
+ FROM ota.optimizer_candidates oc2
+ WHERE oc2.attempt_id = ${TABLE}.attempt_id
+ AND oc2.created_at > ${start_date_bound}
+ AND oc2.id <> ${TABLE}.id
+ AND oc2.candidacy = 'Eligible'
+ AND oc2.`rank` > ${TABLE}.rank
+ AND NOT (oc2.reprice_type = 'multicurrency'
+ AND oc2.gds IN ('dida', 'onefly', 'pkfare', 'flightroutes24', 'unififi'))
+ AND NOT EXISTS (
+ SELECT 1 FROM ota.optimizer_candidates oc_p
+ WHERE oc_p.id = oc2.parent_id
+ AND oc_p.reprice_type = 'single_to_multi'
+ AND oc_p.created_at > ${start_date_bound}
+ )
+ ORDER BY oc2.`rank` ASC, oc2.id ASC
+ LIMIT 1
+ ) ;;
+ description: "Revenue of the next-lower-ranked Eligible candidate on this attempt that is not itself a multicurrency reprice on dida/onefly/pkfare/flightroutes24/unififi. Hidden helper for multicurrency_unblock_extra_revenue_sum — mirrors next_eligible_non_promoted_revenue's rank-below-only pattern."
+ }
+
  # -------------------------
  # Keys (hidden)
  # -------------------------
@@ -637,6 +666,24 @@ view: content_integration_optimizer {
  description: "True if the booking associated with this candidate was successful (not cancelled, or cancelled for non-technical reasons like customer request or payment decline)."
  }
 
+ dimension: is_ticketed_booking {
+ type: yesno
+ sql: CASE
+ WHEN ${booking_id} IS NOT NULL
+ THEN EXISTS (
+ SELECT 1
+ FROM ota.bookings b
+ WHERE b.id = ${booking_id}
+ AND b.status = 'issued'
+ AND b.is_test = 0
+ )
+ ELSE FALSE
+ END ;;
+ group_label: "4. TAGS"
+ label: "Is Ticketed Booking"
+ description: "True when this candidate's booking is actually issued (ticketed), non-test. Use in place of is_booking_successful, which also counts not-yet-ticketed and some cancelled bookings (customer_request / cc_decline / fraud) as successful."
+ }
+
  dimension: is_test_booking {
  type: yesno
  sql: CASE WHEN EXISTS (
@@ -695,6 +742,25 @@ view: content_integration_optimizer {
  group_label: "4. TAGS"
  label: "Attempt Has Seats Tag"
  description: "True when the ATTEMPT has a Seats tag. Applies to every contestant of the attempt."
+ }
+
+ # Why (2026-08-26, FM): optimizer_attempt_tags_pivot pushes {% condition gds %}
+ # onto optimizer_attempts.gds, so Seats is dropped for Amadeus-anchored
+ # attempts won by a multicurrency pkfare/onefly/etc. candidate. This EXISTS
+ # does not filter on the attempt's own gds.
+ dimension: attempt_has_seats_unscoped {
+ type: yesno
+ sql: CASE WHEN EXISTS (
+ SELECT 1
+ FROM ota.optimizer_attempt_tags oat
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oat.tag_id
+ WHERE oat.attempt_id = ${TABLE}.attempt_id
+ AND ot.name = 'Seats'
+ AND oat.created_at > ${start_date_bound}
+ ) THEN TRUE ELSE FALSE END ;;
+ group_label: "4. TAGS"
+ label: "Attempt Has Seats Tag, Any Anchor GDS"
+ description: "True when the ATTEMPT has a Seats tag, with no restriction on the attempt's own gds (the anchor / original search's content source). Use in place of attempt_has_seats, whose backing derived table (optimizer_attempt_tags_pivot) filters on the attempt's own gds and silently drops attempts anchored on a GDS outside that list — e.g. an Amadeus search won by a multicurrency-repriced pkfare/onefly/etc. candidate."
  }
 
  dimension: attempt_has_bundle {
@@ -975,6 +1041,22 @@ view: content_integration_optimizer {
  value_format: "#,##0.00"
  label: "Promoted Booking Extra Revenue (Sum)"
  description: "Sum of promoted_booking_extra_revenue. When a next Eligible non-promoted competitor exists, excludes rows with strictly negative uplift vs that competitor; ties (0.00) are included. When no next competitor exists, sums booked promoted revenue. Algebraic uplift when both revenues are negative uses absolute difference vs next; solo promoted bookings contribute full row revenue."
+ group_label: "MONETARY"
+ }
+
+ measure: multicurrency_unblock_extra_revenue_sum {
+ type: sum
+ sql: CASE
+ WHEN ${is_ticketed_booking}
+ AND ${reprice_type} = 'multicurrency'
+ AND ${gds} IN ('dida', 'onefly', 'pkfare', 'flightroutes24', 'unififi')
+ AND ${attempt_has_seats_unscoped}
+ THEN ${revenue} - COALESCE(${multicurrency_unblock_fallback_revenue}, 0)
+ ELSE NULL
+ END ;;
+ value_format: "#,##0.00"
+ label: "Multicurrency Unblock Extra Revenue (Sum)"
+ description: "Incremental revenue from letting dida/onefly/pkfare/flightroutes24/unififi keep multicurrency repricing on Seats-tagged attempts since the 2026-08-20 fix (Trello #3201). Compares each winning candidate's revenue to the next-LOWER-ranked Eligible candidate that isn't itself one of these newly-unblocked candidates — never a higher-ranked one, since higher-ranked candidates didn't actually win and can't be assumed to have succeeded pre-fix. When no lower-ranked fallback exists, counts the full actual revenue as extra, even if negative."
  group_label: "MONETARY"
  }
 
