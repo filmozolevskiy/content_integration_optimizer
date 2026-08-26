@@ -744,10 +744,14 @@ view: content_integration_optimizer {
  description: "True when the ATTEMPT has a Seats tag. Applies to every contestant of the attempt."
  }
 
- # Why (2026-08-26, FM): optimizer_attempt_tags_pivot pushes {% condition gds %}
- # onto optimizer_attempts.gds, so Seats is dropped for Amadeus-anchored
- # attempts won by a multicurrency pkfare/onefly/etc. candidate. This EXISTS
- # does not filter on the attempt's own gds.
+ dimension: attempt_has_bags {
+ type: yesno
+ sql: ${optimizer_attempt_tags_pivot.attempt_has_bags} = 1 ;;
+ group_label: "4. TAGS"
+ label: "Attempt Has Bags Tag"
+ description: "True when the ATTEMPT has a Bags tag. Applies to every contestant of the attempt."
+ }
+
  dimension: attempt_has_seats_unscoped {
  type: yesno
  sql: CASE WHEN EXISTS (
