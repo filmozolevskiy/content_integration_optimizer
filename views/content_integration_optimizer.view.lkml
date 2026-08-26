@@ -45,6 +45,20 @@ view: content_integration_optimizer {
  ) ;;
  }
 
+ dimension: original_contestant_gds {
+ hidden: yes
+ type: string
+ sql: (
+ SELECT oc_orig.gds
+ FROM ota.optimizer_candidates oc_orig
+ WHERE oc_orig.attempt_id = ${TABLE}.attempt_id
+ AND oc_orig.reprice_type = 'original'
+ AND oc_orig.created_at > ${start_date_bound}
+ LIMIT 1
+ ) ;;
+ description: "gds of the ORIGINAL contestant (reprice_type = 'original') on this attempt. Hidden helper for ff_upgrade_content_source / ff_upgrade_original_fallback_revenue — mirrors original_contestant_gds_account_id but returns the content source itself instead of the office ID."
+ }
+
  dimension: is_child_of_single_to_multi {
  hidden: yes
  type: yesno
@@ -139,6 +153,34 @@ view: content_integration_optimizer {
  LIMIT 1
  ) ;;
  description: "Revenue of the next-lower-ranked Eligible candidate on this attempt that is not itself a multicurrency reprice on dida/onefly/pkfare/flightroutes24/unififi. Hidden helper for multicurrency_unblock_extra_revenue_sum — mirrors next_eligible_non_promoted_revenue's rank-below-only pattern."
+ }
+
+ # Why (2026-08-26): fallback for ff_upgrade_extra_revenue_sum. Skips forward
+ # past any candidate whose gds doesn't match the attempt's own original gds,
+ # landing on the next Eligible candidate that would have kept the booking on
+ # the original content source.
+ dimension: ff_upgrade_original_fallback_revenue {
+ hidden: yes
+ type: number
+ sql: (
+ SELECT oc2.revenue
+ FROM ota.optimizer_candidates oc2
+ WHERE oc2.attempt_id = ${TABLE}.attempt_id
+ AND oc2.created_at > ${start_date_bound}
+ AND oc2.id <> ${TABLE}.id
+ AND oc2.candidacy = 'Eligible'
+ AND oc2.`rank` > ${TABLE}.rank
+ AND oc2.gds = ${original_contestant_gds}
+ AND NOT EXISTS (
+ SELECT 1 FROM ota.optimizer_candidates oc_p
+ WHERE oc_p.id = oc2.parent_id
+ AND oc_p.reprice_type = 'single_to_multi'
+ AND oc_p.created_at > ${start_date_bound}
+ )
+ ORDER BY oc2.`rank` ASC, oc2.id ASC
+ LIMIT 1
+ ) ;;
+ description: "Revenue of the next-lower-ranked Eligible candidate on this attempt whose gds matches the attempt's own original gds. Hidden helper for ff_upgrade_extra_revenue_sum."
  }
 
  # -------------------------
@@ -510,6 +552,35 @@ view: content_integration_optimizer {
  END ;;
  group_label: "MONETARY"
  description: "Booked + Promoted + Successful only: when another Eligible non-promoted competitor exists at a higher rank on this attempt, value is absolute uplift vs that contestant (algebraic difference; 0.00 on tie; both revenues may be negative). When there is no such next competitor, value is this row's revenue only. NULL when a next competitor exists but this row is strictly worse than it (negative uplift), on rare data inconsistencies, or when not booked/not promoted/not successful. Does not compare to the original search contestant—use original_contestant_revenue vs revenue separately if you need that."
+ }
+
+ dimension: ff_upgrade_content_source {
+ type: string
+ sql: CASE
+ WHEN ${is_optimized} AND ${is_booking_successful} AND ${attempt_is_upgrade} AND NOT ${attempt_is_test}
+ THEN CASE WHEN ${gds} = ${original_contestant_gds} THEN 'Same Content Source' ELSE 'Different Content Source' END
+ ELSE NULL
+ END ;;
+ group_label: "4. TAGS"
+ label: "FF Upgrade Content Source"
+ suggestions: ["Same Content Source", "Different Content Source"]
+ description: "Populated only on the booked candidate of an Upgrade-tagged, optimized (booked candidate is not the original), successful, non-test attempt. 'Same Content Source' when the booked candidate's gds matches this attempt's own original gds (Amadeus, aircanadandc, farelogix, whatever it was); 'Different Content Source' when the optimizer moved the booking onto a different content source than the customer originally searched. NULL on every other row — pivot on this with a 'not null' filter."
+ }
+
+ dimension: ff_upgrade_extra_revenue {
+ type: number
+ value_format: "$#,##0.00"
+ sql: CASE
+ WHEN ${ff_upgrade_content_source} = 'Different Content Source' THEN CASE
+ WHEN ${ff_upgrade_original_fallback_revenue} IS NULL THEN ${revenue}
+ WHEN (${revenue} - ${ff_upgrade_original_fallback_revenue}) < 0 THEN ${revenue}
+ ELSE ${revenue} - ${ff_upgrade_original_fallback_revenue}
+ END
+ ELSE NULL
+ END ;;
+ group_label: "MONETARY"
+ label: "FF Upgrade Extra Revenue"
+ description: "Different Content Source rows only (see ff_upgrade_content_source): revenue less the next-ranked Eligible candidate matching this attempt's own original content source. Falls back to the full row revenue when no such fallback candidate exists on the attempt, or when the subtraction would be negative."
  }
 
  # -------------------------
@@ -1061,6 +1132,15 @@ view: content_integration_optimizer {
  value_format: "$#,##0.00"
  label: "Multicurrency Unblock Extra Revenue (Sum)"
  description: "Incremental revenue from letting dida/onefly/pkfare/flightroutes24/unififi keep multicurrency repricing on Seats-tagged attempts since the 2026-08-20 fix (Trello #3201). Compares each winning candidate's revenue to the next-LOWER-ranked Eligible candidate that isn't itself one of these newly-unblocked candidates — never a higher-ranked one, since higher-ranked candidates didn't actually win and can't be assumed to have succeeded pre-fix. When no lower-ranked fallback exists, counts the full actual revenue as extra, even if negative."
+ group_label: "MONETARY"
+ }
+
+ measure: ff_upgrade_extra_revenue_sum {
+ type: sum
+ sql: ${ff_upgrade_extra_revenue} ;;
+ value_format: "$#,##0.00"
+ label: "FF Upgrade Extra Revenue (Sum)"
+ description: "Sum of ff_upgrade_extra_revenue — incremental revenue from FF-upgrade bookings that the optimizer moved onto a different content source than the attempt's own original, vs. the nearest-ranked fallback candidate that would have kept the booking on the original content source."
  group_label: "MONETARY"
  }
 
