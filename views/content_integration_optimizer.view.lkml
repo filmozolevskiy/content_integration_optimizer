@@ -675,6 +675,26 @@ view: content_integration_optimizer {
  description: "Wall-clock runtime, in milliseconds, of the repricing call that produced this candidate. NULL when the candidate has no reprice-call row (see reprice_call_strategy for rollout footprint)."
  }
 
+ dimension: attempt_max_reprice_call_runtime_ms {
+ type: number
+ sql: (
+ SELECT MAX(rc2.runtime_ms)
+ FROM ota.optimizer_reprice_calls rc2
+ WHERE rc2.attempt_id = ${TABLE}.attempt_id
+ AND rc2.status = 200
+ ) ;;
+ label: "Attempt Max Reprice Call Runtime (ms)"
+ group_label: "5. REPRICE CALLS"
+ description: "Maximum runtime_ms across successful (status = 200) optimizer_reprice_calls rows for this attempt (the slowest repricing call that actually completed). Excludes failed/timed-out calls (status != 200), which can be pinned at a ~60-second timeout ceiling and would otherwise swamp the real signal. Repeated on every candidate row of the same attempt — group by Attempt ID (or use a SQL Distinct Key of Attempt ID on your custom measure) before averaging/summing."
+ }
+
+ dimension: is_slowest_reprice_call_in_attempt {
+ type: yesno
+ sql: ${reprice_call_runtime_ms} IS NOT NULL AND ${reprice_call_runtime_ms} = ${attempt_max_reprice_call_runtime_ms} ;;
+ group_label: "5. REPRICE CALLS"
+ description: "True when this candidate's own repricing call is the single slowest (successful) call on its attempt — i.e. reprice_call_runtime_ms equals attempt_max_reprice_call_runtime_ms. Filter to Yes to isolate the exact candidate (and its gds) responsible for the attempt's max runtime, instead of an unrelated row like the booked or original candidate. Can show True on more than one row per attempt if two calls tie for slowest."
+ }
+
  dimension: is_alternative_marketing_carrier {
  type: yesno
  sql: ${optimizer_candidate_tags_pivot.is_alternative_marketing_carrier} = 1 ;;
