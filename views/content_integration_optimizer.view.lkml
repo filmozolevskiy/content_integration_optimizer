@@ -642,6 +642,7 @@ view: content_integration_optimizer {
 
  dimension: reprice_strategy {
  type: string
+ hidden: yes
  sql: ${optimizer_candidate_tags_pivot.reprice_strategy} ;;
  group_label: "4. TAGS"
  description: "RepriceStrategy tag value for this candidate (e.g. 'Best revenue', 'Revenue > Match'). Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='RepriceStrategy'."
