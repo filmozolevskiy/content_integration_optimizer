@@ -675,6 +675,18 @@ view: content_integration_optimizer {
  description: "Wall-clock runtime, in milliseconds, of the repricing call that produced this candidate. NULL when the candidate has no reprice-call row (see reprice_call_strategy for rollout footprint)."
  }
 
+ dimension: attempt_max_reprice_call_runtime_ms {
+ type: number
+ sql: (
+ SELECT MAX(rc2.runtime_ms)
+ FROM ota.optimizer_reprice_calls rc2
+ WHERE rc2.attempt_id = ${TABLE}.attempt_id
+ ) ;;
+ label: "Attempt Max Reprice Call Runtime (ms)"
+ group_label: "5. REPRICE CALLS"
+ description: "Maximum runtime_ms across all optimizer_reprice_calls rows for this attempt (the slowest repricing call on the attempt). Repeated on every candidate row of the same attempt — group by Attempt ID (or use a SQL Distinct Key of Attempt ID on your custom measure) before averaging/summing, or the result over- or under-weights attempts by candidate count."
+ }
+
  dimension: is_alternative_marketing_carrier {
  type: yesno
  sql: ${optimizer_candidate_tags_pivot.is_alternative_marketing_carrier} = 1 ;;
