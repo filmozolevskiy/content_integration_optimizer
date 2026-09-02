@@ -681,10 +681,11 @@ view: content_integration_optimizer {
  SELECT MAX(rc2.runtime_ms)
  FROM ota.optimizer_reprice_calls rc2
  WHERE rc2.attempt_id = ${TABLE}.attempt_id
+ AND rc2.status = 200
  ) ;;
  label: "Attempt Max Reprice Call Runtime (ms)"
  group_label: "5. REPRICE CALLS"
- description: "Maximum runtime_ms across all optimizer_reprice_calls rows for this attempt (the slowest repricing call on the attempt). Repeated on every candidate row of the same attempt — group by Attempt ID (or use a SQL Distinct Key of Attempt ID on your custom measure) before averaging/summing, or the result over- or under-weights attempts by candidate count."
+ description: "Maximum runtime_ms across successful (status = 200) optimizer_reprice_calls rows for this attempt (the slowest repricing call that actually completed). Excludes failed/timed-out calls (status != 200), which can be pinned at a ~60-second timeout ceiling and would otherwise swamp the real signal. Repeated on every candidate row of the same attempt — group by Attempt ID (or use a SQL Distinct Key of Attempt ID on your custom measure) before averaging/summing."
  }
 
  dimension: is_alternative_marketing_carrier {
