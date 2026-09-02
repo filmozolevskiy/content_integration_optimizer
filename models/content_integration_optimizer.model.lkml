@@ -46,4 +46,22 @@ explore: content_integration_optimizer {
       AND ${optimizer_parent_candidates.reprice_type} = 'single_to_multi'
       AND ${optimizer_parent_candidates.created_at_raw} > ${content_integration_optimizer.start_date_bound} ;;
   }
+
+  join: optimizer_reprice_call_candidates {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_reprice_call_candidates.candidate_id} = ${content_integration_optimizer.id} ;;
+  }
+
+  join: optimizer_reprice_calls {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_reprice_calls.id} = ${optimizer_reprice_call_candidates.reprice_call_id} ;;
+  }
+
+  join: optimizer_reprice_strategies {
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${optimizer_reprice_strategies.id} = ${optimizer_reprice_call_candidates.strategy_id} ;;
+  }
 }

@@ -618,6 +618,33 @@ view: content_integration_optimizer {
  description: "RepriceStrategy tag value for this candidate (e.g. 'Best revenue', 'Revenue > Match'). Source: ota.optimizer_candidate_tags joined to ota.optimizer_tags on name='RepriceStrategy'."
  }
 
+ # -------------------------
+ # Dimensions - Reprice Calls
+ # -------------------------
+ # New tables (added 2026-08-31): ota.optimizer_reprice_strategies,
+ # ota.optimizer_reprice_calls, ota.optimizer_reprice_call_candidates.
+ # Small rollout footprint as of 2026-09-02 (~0.13% of candidates have
+ # a matching row) — most other raw columns on these 3 tables are kept
+ # as hidden helpers on their own views for now; only the 2 fields
+ # below are surfaced.
+
+ dimension: reprice_call_strategy {
+ type: string
+ sql: ${optimizer_reprice_strategies.name} ;;
+ label: "RepriceStrategy"
+ group_label: "5. REPRICE CALLS"
+ suggestions: ["Default", "BestRevenue", "Other", "Cheapest", "Match", "Alternative"]
+ description: "Named strategy that produced this candidate (pivot to see all values). Source: ota.optimizer_reprice_strategies via ota.optimizer_reprice_call_candidates.strategy_id — a new (2026-08-31), normalized replacement for the legacy tag-based reprice_strategy field above, which reads the 'RepriceStrategy' candidate tag. NULL for most candidates: this table has a small rollout footprint as of 2026-09-02 (~0.13% of candidates)."
+ }
+
+ dimension: reprice_call_runtime_ms {
+ type: number
+ sql: ${optimizer_reprice_calls.runtime_ms} ;;
+ label: "Reprice Call Runtime (ms)"
+ group_label: "5. REPRICE CALLS"
+ description: "Wall-clock runtime, in milliseconds, of the repricing call that produced this candidate. NULL when the candidate has no reprice-call row (see reprice_call_strategy for rollout footprint)."
+ }
+
  dimension: is_alternative_marketing_carrier {
  type: yesno
  sql: ${optimizer_candidate_tags_pivot.is_alternative_marketing_carrier} = 1 ;;
