@@ -183,6 +183,35 @@ view: content_integration_optimizer {
  description: "Revenue of the next-lower-ranked Eligible candidate on this attempt whose gds matches the attempt's own original gds. Hidden helper for ff_upgrade_extra_revenue_sum."
  }
 
+ dimension: next_eligible_amadeus_revenue {
+ hidden: yes
+ type: number
+ sql: (
+ SELECT oc2.revenue
+ FROM ota.optimizer_candidates oc2
+ WHERE oc2.attempt_id = ${TABLE}.attempt_id
+ AND oc2.created_at > ${start_date_bound}
+ AND oc2.candidacy = 'Eligible'
+ AND oc2.gds = 'amadeus'
+ AND NOT EXISTS (
+ SELECT 1 FROM ota.optimizer_candidate_tags oct
+ INNER JOIN ota.optimizer_tags ot ON ot.id = oct.tag_id
+ WHERE oct.candidate_id = oc2.id
+ AND ot.name = 'LowRevenue'
+ AND oct.created_at > ${start_date_bound}
+ )
+ AND NOT EXISTS (
+ SELECT 1 FROM ota.optimizer_candidates oc_p
+ WHERE oc_p.id = oc2.parent_id
+ AND oc_p.reprice_type = 'single_to_multi'
+ AND oc_p.created_at > ${start_date_bound}
+ )
+ ORDER BY oc2.`rank` ASC, oc2.id ASC
+ LIMIT 1
+ ) ;;
+ description: "Revenue of the best-ranked (lowest rank) Eligible Amadeus candidate on this attempt, excluding LowRevenue-tagged candidates (never booked in practice) and children of single_to_multi reprice types. NULL when no such candidate exists on the attempt. Hidden helper for applepay_paypal_unblock_extra_revenue_sum."
+ }
+
  # -------------------------
  # Keys (hidden)
  # -------------------------
@@ -1160,6 +1189,35 @@ view: content_integration_optimizer {
  label: "Multicurrency Unblock Extra Revenue (Sum)"
  description: "Incremental revenue from letting dida/onefly/pkfare/flightroutes24/unififi keep multicurrency repricing on Seats-tagged attempts since the 2026-08-20 fix (Trello #3201). Compares each winning candidate's revenue to the next-LOWER-ranked Eligible candidate that isn't itself one of these newly-unblocked candidates — never a higher-ranked one, since higher-ranked candidates didn't actually win and can't be assumed to have succeeded pre-fix. When no lower-ranked fallback exists, counts the full actual revenue as extra, even if negative."
  group_label: "MONETARY"
+ }
+
+ measure: applepay_paypal_unblock_extra_revenue_sum {
+ type: sum
+ sql: CASE
+ WHEN ${is_ticketed_booking}
+ AND ${gds} != 'amadeus'
+ AND (${attempt_filtered_values} LIKE '%ApplePayPaymentMethod%' OR ${attempt_filtered_values} LIKE '%PayPalPaymentMethod%')
+ THEN COALESCE(${revenue} - ${next_eligible_amadeus_revenue}, ${revenue})
+ ELSE NULL
+ END ;;
+ value_format: "$#,##0.00"
+ label: "ApplePay/PayPal Unblock Extra Revenue (Sum)"
+ group_label: "MONETARY"
+ description: "Incremental revenue from letting non-Amadeus GDS accounts reprice with ApplePay/PayPal, previously filtered out for them. Ticketed, booked-non-Amadeus rows only, on attempts where that payment method was Filtered. When the attempt still has a viable (non-LowRevenue) Eligible Amadeus candidate, compares this row's revenue to that candidate's revenue (next_eligible_amadeus_revenue). When it doesn't, counts the full row revenue as extra — the booking had no Amadeus path and was saved (see applepay_paypal_unblock_saved_bookings_count)."
+ }
+
+ measure: applepay_paypal_unblock_saved_bookings_count {
+ type: count_distinct
+ sql: CASE
+ WHEN ${is_ticketed_booking}
+ AND ${gds} != 'amadeus'
+ AND (${attempt_filtered_values} LIKE '%ApplePayPaymentMethod%' OR ${attempt_filtered_values} LIKE '%PayPalPaymentMethod%')
+ AND ${next_eligible_amadeus_revenue} IS NULL
+ THEN ${booking_id}
+ END ;;
+ label: "ApplePay/PayPal Unblock Saved Bookings Count"
+ group_label: "Counts"
+ description: "Count of distinct ticketed bookings booked on a non-Amadeus GDS account, on attempts where ApplePay/PayPal was Filtered, that had NO viable (non-LowRevenue) Eligible Amadeus candidate on the attempt — the booking would have failed entirely without non-Amadeus ApplePay/PayPal repricing support."
  }
 
  measure: ff_upgrade_extra_revenue_sum {
