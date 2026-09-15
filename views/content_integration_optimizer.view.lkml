@@ -947,6 +947,14 @@ view: content_integration_optimizer {
  description: "True when the ATTEMPT carries a VccRequired tag (from ota.optimizer_attempt_tags) — set when the chosen payment method needs a virtual credit card to fulfill (ApplePay / PayPal). Propagates to every contestant of the attempt. See attempt_vcc_required_values for the payment method."
  }
 
+ dimension: attempt_is_ineligible_split_payment {
+ type: yesno
+ sql: ${optimizer_attempt_tags_pivot.attempt_is_ineligible_split_payment} = 1 ;;
+ group_label: "4. TAGS"
+ label: "Attempt Is Ineligible Split Payment"
+ description: "True when the ATTEMPT carries an IneligibleSplitPayment tag (from ota.optimizer_attempt_tags) — set when split payment was requested but the attempt is not eligible for it. Value is always NULL as of 2026-09-15 (tag_id 341, 18 rows since 2026-09-14). Propagates to every contestant of the attempt."
+ }
+
  dimension: attempt_filtered_values {
  type: string
  sql: ${optimizer_attempt_tags_pivot.attempt_filtered_values} ;;
